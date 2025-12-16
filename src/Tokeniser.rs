@@ -37,6 +37,10 @@ pub mod Tokeniser {
             }
         }
 
+        pub fn is_lexed(&self) -> bool {
+            self.Lexer_Output.len() > 0
+        }
+
         pub fn resolve_ltok(v: &str) -> Option<LTOK> {
             if v.is_empty() {
                 return None;

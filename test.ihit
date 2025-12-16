@@ -3,5 +3,5 @@ if (a >= b) {
 x = "hello dcwinidw si_ \' .. \n";
 }
 else{
-x = 82338.23
+x ^= 82338.23;
 }

@@ -6,9 +6,13 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
+mod Ast;
+mod Frontend;
 mod Helper;
 mod Lexer_Tok;
+mod Parser;
 mod Parser_Tok;
+mod Semantic_Analysis;
 mod Tokeniser;
 use std::env;
 
