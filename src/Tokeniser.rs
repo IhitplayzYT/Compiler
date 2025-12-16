@@ -31,6 +31,16 @@ pub mod Tokeniser {
         if let Some(v) = ALLOWED_KEYWORDS.get(v) {
             return Some(v.clone());
         } else {
+            if v.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                let count = v.chars().filter(|&c| c == '.').count();
+                if count < 1 {
+                    return Some(LTOK::INT((v.to_string()).parse().unwrap_or(0)));
+                } else if count == 1 {
+                    return Some(LTOK::FLOAT((v.to_string()).parse().unwrap_or(0.00)));
+                } else {
+                    return Some(LTOK::STRING(v.to_string()));
+                }
+            }
             Some(match v {
                 "+" => LTOK::PLUS,
                 "-" => LTOK::MINUS,
@@ -70,7 +80,7 @@ pub mod Tokeniser {
                 "NULL" => LTOK::NULL,
                 "\"" => LTOK::DQUOTE,
                 "\'" => LTOK::QUOTE,
-                _ => LTOK::LITERAL(v.to_string()),
+                _ => LTOK::IDENT(v.to_string()),
             })
         }
     }
@@ -79,8 +89,27 @@ pub mod Tokeniser {
         let mut ret: Vec<LTOK> = Vec::new();
         let mut iter = x.chars().peekable();
         let mut temp = String::new();
+        let mut c = 0;
         while let Some(i) = iter.next() {
-            if i == ' ' || i == '\n' {
+            if c >= 1 {
+                if i == '\'' && c == 1 {
+                    c = 0;
+                    ret.push(LTOK::STRING((&temp[..]).to_string()));
+                    temp.clear();
+                } else if i == '\"' && c == 2 {
+                    c = 0;
+                    ret.push(LTOK::STRING((&temp[..]).to_string()));
+                    temp.clear();
+                } else {
+                    temp.push(i);
+                }
+            } else if (i == '\'') && (c == 0) {
+                c = 1;
+                temp.clear();
+            } else if (i == '\"') && (c == 0) {
+                c = 2;
+                temp.clear();
+            } else if i == ' ' || i == '\n' {
                 if let Some(v) = resolve_ltok(&temp[..]) {
                     ret.push(v);
                 } else {
@@ -96,8 +125,6 @@ pub mod Tokeniser {
                 || i == ':'
                 || i == ';'
                 || i == ','
-                || i == '\''
-                || i == '\"'
                 || i == '~'
             {
                 if let Some(k) = resolve_ltok(&temp[..]) {

@@ -34,6 +34,13 @@ pub mod collections {
     }
 }
 
+pub mod Checkers {
+    pub fn is_numeric(c: char) -> bool {
+        let c = c as u8;
+        c >= 48 && c <= 57
+    }
+}
+
 pub mod utilities {
     use std::fs;
 

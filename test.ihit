@@ -1,7 +1,7 @@
 let mut x : i32 = 56;
 if (a >= b) {
-x = "hello";
+x = "hello dcwinidw si_ \' .. \n";
 }
 else{
-x = 0
+x = 82338.23
 }
