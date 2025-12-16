@@ -21,6 +21,7 @@ fn main() {
     let file =
         Helper::utilities::read_file(&arguments[1]).unwrap_or_else(|e| std::process::exit(0));
 
-    let ret = Tokeniser::Tokeniser::Tokenise(file);
-    println!("{:?}", ret);
+    let mut LEXER = Tokeniser::Tokeniser::Lexer::new(file);
+    LEXER.Tokenise();
+    println!("{:?}", LEXER.Lexer_Output);
 }
