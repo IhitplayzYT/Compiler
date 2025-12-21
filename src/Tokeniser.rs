@@ -53,7 +53,7 @@ pub mod Tokeniser {
                     if count < 1 {
                         return Some(LTOK::INT((v.to_string()).parse().unwrap_or(0)));
                     } else if count == 1 {
-                        return Some(LTOK::FLOAT((v.to_string()).parse().unwrap_or(0.00)));
+                        return Some(LTOK::FLOAT(v.to_string()));
                     } else {
                         return Some(LTOK::STRING(v.to_string()));
                     }
@@ -102,7 +102,7 @@ pub mod Tokeniser {
             }
         }
 
-        pub fn Tokenise(&mut self) {
+        pub fn Tokenise(&mut self) -> bool {
             let x = self.text.clone();
             let mut ret: Vec<LTOK> = Vec::new();
             let mut iter = x.chars().peekable();
@@ -290,6 +290,7 @@ pub mod Tokeniser {
             }
             ret.push(LTOK::EOF);
             self.Lexer_Output = ret;
+            true
         }
     }
 }

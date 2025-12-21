@@ -8,7 +8,7 @@
 
 pub mod Lex_Tok {
     // For compound assignment operators
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq,Hash,Eq)]
     pub enum LTOK {
         LET,            // -> let (Varib Declaring)
         MUT,            // -> mut (mutability declaring)
@@ -21,7 +21,7 @@ pub mod Lex_Tok {
         IDENT(String),  // -> Identifier
         STRING(String), // -> Can be any string
         INT(i64),       // -> To identify whole numbers
-        FLOAT(f64),     // -> To identify floats
+        FLOAT(String),     // -> To identify floats(Done so that the enum can have trait Hash and Eq to be used by the parser in precedmap)
         PLUS,           // -> (+)
         MINUS,          // -> (-)
         DIV,            // -> (/)
@@ -60,8 +60,8 @@ pub mod Lex_Tok {
         SEMICOLON,      // -> (;)
         COLON,          // -> (:)
         COMMA,          // -> (,)
-        NULL,           // -> (None/Null)
-        EOF,            // -> ('')
+        NULL,           // -> (None/Null)   
+    EOF,            // -> ('')          (X)
         QUOTE,          // -> (')
         DQUOTE,         // -> (")
     }

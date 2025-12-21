@@ -2,8 +2,7 @@ pub mod AST {
     use crate::Lexer_Tok::Lex_Tok::LTOK;
     use std::{cell::RefCell, rc::Rc};
     pub type link = Rc<RefCell<AstNode>>;
-
-    pub enum AstNode {
+    pub enum Expr{
         Int(i64),
         Float(f64),
         String(String),
@@ -11,9 +10,13 @@ pub mod AST {
         Ident(String),
         Binary_op {
             op: LTOK, // Represents the Node for an operator
-            left: link,
+            left: link,  // Unary ops such as shorthands can be represented by considering the left pointer ab the variable on which the unary op being done
             right: link,
         },
+    }
+
+    pub enum AstNode {
+        Expression(Expr),
         Let {
             name: String, // Deals with let,mut and const
             mutable: bool,
