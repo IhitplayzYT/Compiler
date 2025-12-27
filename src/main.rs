@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused)]
+#[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused,unused_imports)]
 mod Ast;
 mod Frontend;
 mod Helper;
@@ -14,6 +14,7 @@ mod Lexer_Tok;
 mod Parser;
 mod Parser_Tok;
 mod Semantic_Analysis;
+mod Ident_table;
 mod Tokeniser;
 use std::env;
 

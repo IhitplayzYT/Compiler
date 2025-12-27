@@ -9,6 +9,8 @@
 #[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused)]
 pub mod PARSER {
     use std::{collections::HashMap, hash::Hash};
+    use std::rc::Rc;
+    use std::cell::RefCell;
     use crate::{Ast::{self, AST::{self,AST_Node,link,Statmnt,Expr,Code}}, Lexer_Tok::Lex_Tok::LTOK};
 
     pub struct Parser {
@@ -51,7 +53,7 @@ pub mod PARSER {
             //}
             return Some(AST_Node { 
                 code: Code::Statmnt(Statmnt::Let { name: (), mutable: (), value: () }),
-                children: (None,None),
+                children: vec![] ,
             });
         }
 
@@ -59,26 +61,37 @@ pub mod PARSER {
             let mut ret:Option<AST_Node> = None;
             return Some(AST_Node { 
                 code: Code::Statmnt(Statmnt::If { cond: (), then_branch: (), else_branch: () }),
-                children: (None,None),
+                children: (vec![]),
             });
         }
         
         fn eval_while(&mut self) -> Option<AST_Node>{
             return Some(AST_Node { 
                 code: Code::Statmnt(Statmnt::While { cond: (), body: ()}),
-                children: (None,None),
+                children: (vec![]),
                 });
         }
-
+        
+        // Extremely simple that deals with runtime panics on is own since the eval_expr also deals with the untme panics
         fn eval_for(&mut self) -> Option<AST_Node>{
             return Some(AST_Node{
-                 code: Code::Statmnt(Statmnt::For { init: self.eval_expr(), cond: self.eval_expr(), step: self.eval_expr(), body: self.Parse() }),children:(None,None),
+                 code: Code::Statmnt(Statmnt::For { init: vec![Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))], cond:  Some(Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))), step: Some(Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))), body:  vec![Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_statmnt()))]}),children:(vec![]),
                  });
         }
 
        fn eval_expr(&mut self)->Option<AST_Node>{
+        while ((self.peek() != &LTOK::SEMICOLON) && (self.peek() != &LTOK::EOF)){
+            match self.peek().clone(){
+                LTOK::IDENT(x) => {lk_up_ident(x)}, 
+                _ => return None,
+            }
+
+        }
+
+
+
           return Some(AST_Node{
-               code: Code::Expr(),children:(None,None),
+               code: Code::Expr(),children:vec![],
         });
       }
 
