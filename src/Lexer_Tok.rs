@@ -9,7 +9,7 @@
 #[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused)]
 pub mod Lex_Tok {
     // For compound assignment operators
-    #[derive(Debug, Clone, PartialEq,Hash,Eq)]
+    #[derive(Debug, Clone, PartialEq)]
     pub enum LTOK {
         LET,            // -> let (Varib Declaring)
         MUT,            // -> mut (mutability declaring)
@@ -19,10 +19,13 @@ pub mod Lex_Tok {
         WHILE,          // -> (Conditional Loop over Iterable)
         FOR,            // ->  (Iterative Loop over Iterable)
         FN,             // -> (Function Declaration KeyWord)
+        BREAK,
+        CONTINUE,
+        RETURN,
         IDENT(String),  // -> Identifier
         STRING(String), // -> Can be any string
         INT(i64),       // -> To identify whole numbers
-        FLOAT(String),     // -> To identify floats(Done so that the enum can have trait Hash and Eq to be used by the parser in precedmap)
+        FLOAT(f64),     // -> To identify floats(Done so that the enum can have trait Hash and Eq to be used by the parser in precedmap)
         PLUS,           // -> (+)
         MINUS,          // -> (-)
         DIV,            // -> (/)
@@ -65,5 +68,10 @@ pub mod Lex_Tok {
         EOF,            // -> ('')          (X)
         QUOTE,          // -> (')
         DQUOTE,         // -> (")
+        ARROW,          // -> (->)
+        INT_TYPE,
+        FLOAT_TYPE,
+        STRING_TYPE,
+        SPECIAL_TOK     // -> Special token used by Parser inner workings 
     }
 }

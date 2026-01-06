@@ -11,89 +11,96 @@ pub mod PARSER {
     use std::{collections::HashMap, hash::Hash};
     use std::rc::Rc;
     use std::cell::RefCell;
-    use crate::{Ast::{self, AST::{self,AST_Node,link,Statmnt,Expr,Code}}, Lexer_Tok::Lex_Tok::LTOK};
-
+    use crate::Parser_Tok::Tokens::Token;
+    use crate::{Ast::{self, AST::{self,Code,Val,Type,BIN_OP,UN_OP,Declare,link,Statmnt,Expr}},Lexer_Tok::Lex_Tok::LTOK,Ident_table::Ident};
+    use crate::Errors::Err::{ParserError,Parser_ret};
     pub struct Parser {
         input: Vec<LTOK>,
         idx:usize,
-        ast: Option<AST::AST_Node>,
     }
     impl Parser{
+        // Constructor
         fn new(v:Vec<LTOK>) -> Self{
-            Self{ast:None,input:v,idx:0}
+            Self{input:v,idx:0}
         }
-        fn next(&mut self) -> &LTOK{
-            if self.input.is_empty() {
-                return &LTOK::EOF;
+        // Helper
+        fn next(&mut self) -> LTOK{
+            if self.input.is_empty() || self.idx == self.input.len() {
+                return LTOK::EOF;
             }
             self.idx += 1;
-            self.input.get(self.idx - 1).unwrap_or(&LTOK::EOF)
+            self.peek().clone()
         }
         fn peek(&self) -> &LTOK{
-            if self.input.is_empty() {
+            if self.input.is_empty() || self.idx == self.input.len() {
                 return &LTOK::EOF;
             }
             self.input.get(self.idx).unwrap_or(&LTOK::EOF)
         }
-        fn expect(&mut self,e: LTOK) -> bool{
-            if &e == self.next(){
-                return true;
-            }
-            false
+
+        fn check(&mut self,e: &LTOK) -> bool{
+           std::mem::discriminant(self.peek()) == std::mem::discriminant(e)
         }
 
-        fn eval_let(&mut self) -> Option<AST_Node>{
-            //let mut ret:Option<AST_Node> = None;
-            //match self.peek().clone(){
-            //    LTOK::MUT =>{ 
-
-            //    },
-            //    LTOK::IDENT(x) => {},
-            //    _=>  return None,
-            //}
-            return Some(AST_Node { 
-                code: Code::Statmnt(Statmnt::Let { name: (), mutable: (), value: () }),
-                children: vec![] ,
-            });
+        fn consume(&mut self,e: &LTOK) -> Parser_ret<LTOK>{
+         if self.check(e) {
+            return Ok(self.next());
+         }
+         Err(ParserError::UnexpectedToken { expected:format!("{:?}",e.clone()), got:format!("{:?}",self.peek().clone()) })
         }
 
-        fn eval_if_else(&mut self) -> Option<AST_Node>{
-            let mut ret:Option<AST_Node> = None;
-            return Some(AST_Node { 
-                code: Code::Statmnt(Statmnt::If { cond: (), then_branch: (), else_branch: () }),
-                children: (vec![]),
-            });
+        fn eval_declare(&mut self) -> bool{
+            match self.peek(){
+            LTOK::FN => self.eval_fxn(),
+                _ => {return false;}
+            };
+            true
+        } 
+
+        fn eval_fxn(&mut self) -> Parser_ret<&LTOK>{
+        self.consume(&LTOK::FN)?;
+        let name = match self.next(){
+            LTOK::IDENT(x) => x,
+            _ => {return Err(ParserError::UnexpectedToken{expected:"Fxn name\n".to_string(),got:"INVALID_TOK\n".to_string()});}
+        };
+        self.consume(&LTOK::LPAREN)?;
+        let param = self.eval_params()?;
+        self.consume(&LTOK::RPAREN)?;
+        self.consume(&LTOK::ARROW)?;
+        let rtype = self.eval_type()?;
+        self.consume(&LTOK::LBRACE)?;
+        let body = self.eval_block()?;
+        self.consume(&LTOK::RBRACE)?;
+        self.consume(&LTOK::SEMICOLON)?;
+        return Ok(&LTOK::EOF);
         }
-        
-        fn eval_while(&mut self) -> Option<AST_Node>{
-            return Some(AST_Node { 
-                code: Code::Statmnt(Statmnt::While { cond: (), body: ()}),
-                children: (vec![]),
-                });
+
+        fn eval_params(&mut self) -> Parser_ret<&LTOK>{
+            Ok(&LTOK::SPECIAL_TOK)
         }
+        fn eval_type(&mut self) -> Parser_ret<&LTOK>{
+            Ok(&LTOK::SPECIAL_TOK)
+        }
+        fn eval_block(&mut self) -> Parser_ret<&LTOK>{
+            Ok(&LTOK::SPECIAL_TOK)
+        }
+
+
+//        fn eval_let(&mut self) -> Option<Statmnt>{
+//        }
+//
+//        fn eval_if_else(&mut self) -> Option<AST_Node>{
+//        }
+//        
+//        fn eval_while(&mut self) -> Option<AST_Node>{
+//        }
         
         // Extremely simple that deals with runtime panics on is own since the eval_expr also deals with the untme panics
-        fn eval_for(&mut self) -> Option<AST_Node>{
-            return Some(AST_Node{
-                 code: Code::Statmnt(Statmnt::For { init: vec![Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))], cond:  Some(Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))), step: Some(Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_expr()))), body:  vec![Rc::new(RefCell::new(*self.eval_expr().unwrap_or(AST_Node { code: Code::Expr(Expr::Null), children: vec![] }).as_statmnt()))]}),children:(vec![]),
-                 });
-        }
-
-       fn eval_expr(&mut self)->Option<AST_Node>{
-        while ((self.peek() != &LTOK::SEMICOLON) && (self.peek() != &LTOK::EOF)){
-            match self.peek().clone(){
-                LTOK::IDENT(x) => {lk_up_ident(x)}, 
-                _ => return None,
-            }
-
-        }
-
-
-
-          return Some(AST_Node{
-               code: Code::Expr(),children:vec![],
-        });
-      }
+//        fn eval_for(&mut self) -> Option<AST_Node>{
+//        }
+//
+//       fn eval_expr(&mut self)->Option<AST_Node>{
+//        }
 
         fn binding_pow(tok : &LTOK) -> (i32,i32){ 
             match *tok {
@@ -117,13 +124,11 @@ pub mod PARSER {
 
         fn Parse(&mut self) -> bool {          
             if self.input.is_empty(){return false;}
-            let mut ret: Option<AST_Node> = None;
             
         
 
 
 
-            self.ast = ret;
             true
         }
 

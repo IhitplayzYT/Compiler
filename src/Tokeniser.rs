@@ -10,7 +10,7 @@
 pub mod Tokeniser {
     use crate::Lexer_Tok::Lex_Tok::LTOK;
     use once_cell::sync::Lazy;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, process::exit};
 
     pub static ALLOWED_KEYWORDS: Lazy<HashMap<&'static str, LTOK>> = Lazy::new(|| {
         HashMap::from([
@@ -22,6 +22,21 @@ pub mod Tokeniser {
             ("while", LTOK::WHILE),
             ("for", LTOK::FOR),
             ("fn", LTOK::FN),
+            ("break", LTOK::BREAK),
+            ("continue", LTOK::CONTINUE),
+            ("return", LTOK::RETURN),
+            ("i8", LTOK::INT_TYPE),
+            ("i16", LTOK::INT_TYPE),
+            ("i32", LTOK::INT_TYPE),
+            ("i64", LTOK::INT_TYPE),
+            ("int", LTOK::INT_TYPE),
+            ("long", LTOK::INT_TYPE),
+            ("f32", LTOK::FLOAT_TYPE),
+            ("f64", LTOK::FLOAT_TYPE),
+            ("float", LTOK::FLOAT_TYPE),
+            ("double", LTOK::FLOAT_TYPE),
+            ("string",LTOK::STRING_TYPE),
+            ("String",LTOK::STRING_TYPE),
         ])
     });
 
@@ -54,7 +69,7 @@ pub mod Tokeniser {
                     if count < 1 {
                         return Some(LTOK::INT((v.to_string()).parse().unwrap_or(0)));
                     } else if count == 1 {
-                        return Some(LTOK::FLOAT(v.to_string()));
+                        return Some(LTOK::FLOAT(v.to_string().trim().parse().unwrap_or_else(|e| {exit(-1);})));
                     } else {
                         return Some(LTOK::STRING(v.to_string()));
                     }
@@ -163,8 +178,13 @@ pub mod Tokeniser {
                         temp.clear();
                     }
                 } else if i == '-' {
-                    if let Some('=') = iter.next() {
-                        ret.push(LTOK::S_MINUS);
+                    if let Some(v) = iter.next() {
+                        let r = match v{
+                            '=' => LTOK::S_MINUS,
+                            '>' => LTOK::ARROW,
+                            _ => {exit(-1);}
+                        };
+                        ret.push(r);
                         temp.clear();
                         iter.next();
                     } else {

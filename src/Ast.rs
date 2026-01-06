@@ -11,86 +11,111 @@ pub mod AST {
     use std::{cell::{Ref, RefCell}, rc::Rc};
     pub type link<T> = Rc<RefCell<T>>;
     
+    #[derive(Clone,PartialEq,Debug)]
     pub enum Val{
         Int(i64),
         Float(f64),
         String(String),
+        Null
     }
 
+    #[derive(Clone,PartialEq,Debug)]
+    pub enum Type{
+        INT,
+        FLOAT,
+        STRING,
+        NULL,
+    } 
 
-    #[derive(Clone,Copy)]
-    pub enum Expr<'a>{
+    #[derive(Clone,PartialEq,Debug)]
+    pub enum BIN_OP{
+        Add,Sub,Mul,Div,Mod,Eq,Lt_eq,Gt_eq,Lt,Gt,N_eq,Amp,Pipe,Xor,Lshift,Rshift,And,Or
+    }
+
+    #[derive(Clone,PartialEq,Debug)]
+    pub enum UN_OP{
+        Tilda,Bang,Neg
+    }
+
+    #[derive(Clone,Debug,PartialEq)]
+    pub enum Expr{
         Int(i64),
-        Float(&'a str),
-        String(&'a str),
+        Float(f64),
+        String(String),
         Null,
-        Ident(&'a str),
+        Ident(String),
+
         Binary_op {
-            op: link<Expr>, // Represents the Node for an operator
+            op: BIN_OP, // Represents the Node for an operator
             left: link<Expr>,  // Unary ops such as shorthands can be represented by considering the left pointer ab the variable on which the unary op being done
             right: link<Expr>
         },
+
         Unary_op{
-            op:LTOK,
+            op:UN_OP,
             operand: link<Expr>,
-        }
+        },
+
+        Fxn_call{
+            name: String,
+            args: Vec<Expr>,
+        },
+
+    }
+    #[derive(Clone,PartialEq,Debug)]
+    pub enum Declare{
+        Function { 
+            name:String,
+            rtype: Type,
+            args : Vec<(String,Type)>,
+            body : Vec<Statmnt>,
+        },
     }
 
+
+
+
+    #[derive(Clone,PartialEq,Debug)]
     pub enum Statmnt {
-        Expression(Expr),
         Let {
             name: String, // Deals with let,mut and const
             mutable: bool,
+            type_annot: Type,
             value: link<Expr>,
         },
         If {
-            cond: link<Expr>,
-            then_branch: Vec<link<Statmnt>>, // Deals with if and else
-            else_branch: Option<Vec<link<Statmnt>>>,
+            cond: Expr,
+            then_branch: Vec<Statmnt>, // Deals with if and else
+            else_branch: Option<Vec<Statmnt>>,
+        },
+        Assignment{
+            name:String,
+            val: Expr,
         },
         While {
-            cond: link<Expr>, // While loop
-            body: Vec<link<Statmnt>>,
+            cond: Expr, // While loop
+            body: Vec<Statmnt>,
         },
-        For {
-            init: Vec<link<Expr>>,
-            cond: Option<link<Expr>>, // For loop SYNTAX : C and Rust hybrid type
-            step: Option<link<Expr>>,
-            body: Vec<link<Statmnt>>,
+        For_C {
+            init: Vec<Expr>,
+            cond: Option<Expr>, // For loop SYNTAX : C
+            step: Option<Expr>,
+            body: Vec<Statmnt>,
         },
-        None
-    }
-    pub enum Code{
+        For_Rust{
+            var_name: String, // For loop SYNTAX : Rust
+            lb: Expr,
+            rb: Expr,
+        },
         Expr(Expr),
-        Statmnt(Statmnt),
-    }
-    pub struct AST_Node{
-        pub code : Code,
-        pub children : Vec<Option<link<AST_Node>>>,
-    }
-    impl AST_Node{
-    pub fn new(c : Code) -> Self{
-       Self {code:c,children:vec![]} 
-    }
-pub fn as_expr<'a>(& 'a self) -> & 'a Expr{
-    if let Code::Expr(e) = &self.code{
-    return e;
-    }
-    else{
-    return &Expr::Null; 
-    }
-}
-
-    pub fn as_statmnt<'a>(&'a self) ->  &'a Statmnt{
-        if let Code::Statmnt(e) = &self.code{
-        return e;
-        }
-        else{
-        return &Statmnt::None;
-        }
+        Break,
+        Continue,
+        Return(Option<Expr>),
+        Block(Vec<Statmnt>)
 
     }
-}
-
+    pub struct Code{
+        pub Program: Vec<Declare>,
+    }
 
 }
