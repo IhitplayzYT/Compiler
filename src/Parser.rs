@@ -56,7 +56,6 @@ pub mod PARSER {
             };
             true
         } 
-
         fn eval_fxn(&mut self) -> Parser_ret<&LTOK>{
         self.consume(&LTOK::FN)?;
         let name = match self.next(){
@@ -84,7 +83,35 @@ pub mod PARSER {
         fn eval_block(&mut self) -> Parser_ret<&LTOK>{
             Ok(&LTOK::SPECIAL_TOK)
         }
+        fn eval_expr(&mut self) -> Parser_ret<&LTOK>{
+            Ok(&LTOK::SPECIAL_TOK)
+        }
 
+
+        fn eval_if_else(&mut self) -> Parser_ret<&LTOK>{
+            self.consume(&LTOK::IF)?;
+            self.consume(&LTOK::LPAREN)?;
+            let cond = self.eval_expr()?;
+            self.consume(&LTOK::RPAREN)?;
+            self.consume(&LTOK::LBRACE)?;
+            let if_block = self.eval_block()?;
+            self.consume(&LTOK::RBRACE)?;
+
+            let else_block = {
+            if let &LTOK::ELSE = self.peek(){
+                self.consume(&LTOK::LBRACE)?;
+                let else_block = self.eval_block()?;
+                self.consume(&LTOK::RBRACE)?;
+                else_block
+            }
+            else{
+                None
+            }
+        };
+          // (xx)
+
+            Ok(&LTOK::SPECIAL_TOK)
+        }
 
 //        fn eval_let(&mut self) -> Option<Statmnt>{
 //        }
