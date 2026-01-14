@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused)]
+#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod PARSER {
     use std::{collections::HashMap, hash::Hash};
     use std::rc::Rc;
@@ -19,28 +19,42 @@ pub mod PARSER {
         idx:usize,
     }
     impl Parser{
-        // Constructor
+        /* ******************************** CONSTRUCTOR ********************************  */
         fn new(v:Vec<LTOK>) -> Self{
             Self{input:v,idx:0}
         }
-// HELPER
+        /* ******************************** CONSTRUCTOR ********************************  */
+
+
+        /* ******************************** API ********************************  */
+        fn Parse(&mut self) -> Parser_ret<Code> {         
+            let mut ret =  Vec::new();
+            while !self.check(&LTOK::EOF){
+                ret.push(self.eval_declare()?);
+            }
+            Ok(Code { Program: ret })
+        }
+        /* ******************************** API ********************************  */
+
+
+        /* ******************************** HELPER ********************************  */
         fn next(&mut self) -> LTOK{
             if self.input.is_empty() || self.idx == self.input.len() {
                 return LTOK::EOF;
             }
             self.idx += 1;
-            self.peek().clone()
-        }
+            self.peek().clone()}
+
+
         fn peek(&self) -> &LTOK{
             if self.input.is_empty() || self.idx == self.input.len() {
                 return &LTOK::EOF;
             }
-            self.input.get(self.idx).unwrap_or(&LTOK::EOF)
-        }
+            self.input.get(self.idx).unwrap_or(&LTOK::EOF)}
 
-        fn check(&mut self,e: &LTOK) -> bool{
-           std::mem::discriminant(self.peek()) == std::mem::discriminant(e)
-        }
+        fn check(&mut self,e: &LTOK) -> bool{std::mem::discriminant(self.peek()) == std::mem::discriminant(e)}
+
+
         fn match_token(&mut self,token:&[LTOK]) -> bool{
             for i in token{
                 if self.check(i){
@@ -48,39 +62,44 @@ pub mod PARSER {
                     return true;
                 }
             }
-            false
-        }
+            false}
+
+
         fn consume(&mut self,e: &LTOK) -> Parser_ret<LTOK>{
          if self.check(e) {
             return Ok(self.next());
          }
-         Err(ParserError::UnexpectedToken { expected:format!("{:?}",e.clone()), got:format!("{:?}",self.peek().clone()) })
-        }
-//HELPER
+         Err(ParserError::UnexpectedToken { expected:format!("{:?}",e.clone()), got:format!("{:?}",self.peek().clone()) })}
 
+
+        /* ******************************** HELPER ********************************  */
+
+        
+        /* ******************************** FUNCTIONS ********************************  */
         fn eval_declare(&mut self) -> Parser_ret<Declare>{
             match self.peek(){
             LTOK::FN => self.eval_fxn(),
                 _ => {return Err(ParserError::Invalid_Code);}
             }
 
-        } 
-        
+        }         
+
         fn eval_fxn(&mut self) -> Parser_ret<Declare>{
         self.consume(&LTOK::FN)?;
+
         let name = match self.next(){
             LTOK::IDENT(x) => x,
-            _ => {return Err(ParserError::UnexpectedToken{expected:"Fxn name\n".to_string(),got:"INVALID_TOK\n".to_string()});}
-        };
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Fxn name\n".to_string(),got:format!("{:?}",tok)});}};
+
         self.consume(&LTOK::LPAREN)?;
+
         let param = self.eval_params()?;
+
         self.consume(&LTOK::RPAREN)?;
 
-        let rtype = if self.match_token(&[LTOK::ARROW]){
-            Some(self.eval_type()?)
-        }else{
-            None
-        };
+        let rtype = 
+        if self.match_token(&[LTOK::ARROW]) {Some(self.eval_type().unwrap())}
+        else{None};
 
         let body = self.eval_block()?;
         self.consume(&LTOK::RBRACE)?;
@@ -89,7 +108,6 @@ pub mod PARSER {
 
         fn eval_params(&mut self) -> Parser_ret<Vec<(String,Type)>>{
         let mut ret:Vec<(String,Type)> = Vec::new();
-
         if !self.check(&LTOK::RPAREN) {
             loop{
                 let name = match self.next() {
@@ -104,24 +122,144 @@ pub mod PARSER {
         }
         Ok(ret)
         }
+        /* ******************************** FUNCTIONS ********************************  */
 
+
+        /* ******************************** LET & CONST ********************************  */
+
+        fn eval_let(&mut self) -> Parser_ret<Statmnt> {
+        self.consume(&LTOK::LET)?;
+        let mutable = self.match_token(&[LTOK::MUT]);
+        let name: String = match self.next() {
+        LTOK::IDENT(x) => x,
+        t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!(":?",t)})
+        };
+        let annot = if self.match_token(&[LTOK::COLON]) {
+        Some(self.eval_type()?)
+        }
+        else{
+        None
+        };
+
+        self.consume(&LTOK::ASSGN)?;
+        let val = self.eval_expr()?;
+        self.consume(&LTOK::SEMICOLON)?;
+        Ok(Statmnt::Let { name, mutable, type_annot:annot, value: val })
+        }
+
+        fn eval_const(&mut self) -> Parser_ret<Statmnt> {
+            self.consume(&LTOK::CONST)?;
+            let name: String = match self.next() {
+            LTOK::IDENT(x) => x,
+            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!(":?",t)})
+            };
+            let annot = if self.match_token(&[LTOK::COLON]) {
+            Some(self.eval_type()?)
+            }
+            else{
+            None
+            };
+            self.consume(&LTOK::ASSGN)?;
+            let val = self.eval_expr()?;
+            self.consume(&LTOK::SEMICOLON)?;
+            Ok(Statmnt::Let { name, mutable:true, type_annot:annot, value: val })
+        }
+   
+        /* ******************************** LET & CONST ********************************  */
+
+        /* ******************************** IF-ELSE ********************************  */
+        /* ******************************** IF-ELSE ********************************  */
+
+
+        /* ******************************** HELPER ********************************  */
+        
         fn eval_type(&mut self) -> Parser_ret<Type>{
             match self.next(){
                 LTOK::INT_TYPE => Ok(Type::INT),
                 LTOK::FLOAT_TYPE => Ok(Type::FLOAT),
                 LTOK::STRING_TYPE => Ok(Type::STRING),
-                z => Err(ParserError::UnexpectedToken { expected: "type".to_string(), got:  format!("{:?}",z)})
+                z => Err(ParserError::UnexpectedToken { expected: "INT|FLOAT|STRING".to_string(), got:  format!("{:?}",z)})
             }
         }
 
-        fn eval_block(&mut self) -> Parser_ret<&LTOK>{
-            Ok(&LTOK::SPECIAL_TOK)
-        }
-        fn eval_expr(&mut self) -> Parser_ret<&LTOK>{
-            Ok(&LTOK::SPECIAL_TOK)
+        fn binding_pow(tok : &LTOK) -> (i32,i32){ 
+            match *tok {
+                LTOK::LPAREN => (0,100),
+                LTOK::RPAREN => (100,0),
+                LTOK::BANG | LTOK::TILDA | LTOK::MODULO  => (0,99),
+                LTOK::DIV | LTOK::STAR => (60,61),
+                LTOK::PLUS | LTOK::MINUS => (50,51),
+                LTOK::LSHIFT | LTOK::RSHIFT => (45,46),
+                LTOK::AMP => (40, 41),
+                LTOK::CARET => (39, 40),
+                LTOK::PIPE => (38, 39),
+                LTOK::EQ | LTOK::N_EQ | LTOK::GT | LTOK::GT_EQ | LTOK::LT_EQ | LTOK::LT => (30, 31),
+                LTOK::ANDAND => (20, 21),
+                LTOK::OROR => (10, 11),
+                LTOK::S_AMP | LTOK::S_PIPE | LTOK::S_CARET |LTOK::S_PLUS |LTOK::S_MULT |LTOK::S_MINUS |LTOK::S_DIV |LTOK::S_MOD | LTOK::ASSGN => (0,1),
+                _ => (-1,-1),
+            }
+
         }
 
+        fn eval_tuple_types(&mut self) -> Parser_ret<Vec<Type>>{
+            let mut ret = Vec::new();
+            while !self.check(&LTOK::LPAREN){
+                ret.push(self.eval_type()?);
+                if !self.match_token(&[LTOK::COMMA]){
+                    break;
+                }
+            }
+            Ok(ret)
+        }
 
+        /* ******************************** HELPER ********************************  */
+
+        fn eval_statmnt(&mut self) -> Parser_ret<Statmnt>{
+            match self.peek() {
+                LTOK::LET => {self.eval_let()},
+                LTOK::CONST => {self.eval_const();},
+                LTOK::IF  => {self.eval_if();},
+                LTOK::WHILE => {self.eval_while();},
+                LTOK::FOR => {self.eval_for();},
+                
+                LTOK::BREAK => {
+                self.next();
+                self.consume(&LTOK::SEMICOLON);
+                Ok(Statmnt::Break)
+                },
+
+                LTOK::CONTINUE =>{
+                self.next();
+                self.consume(&LTOK::SEMICOLON);
+                Ok(Statmnt::Continue)
+                },
+
+                LTOK::RETURN => self.eval_return(),
+
+                LTOK::LBRACE => {
+                    self.next();
+                    let blk = self.eval_block()?;
+                    self.consume(&LTOK::RBRACE)?;
+                    Ok(Statmnt::Block(blk))
+                },
+                _ => eval_expr()
+
+            }  
+        }
+
+        fn eval_block(&mut self) -> Parser_ret<Vec<Statmnt>>{
+            let mut statmnts:Vec<Statmnt> = Vec::new();
+            while !self.check(&LTOK::RBRACE) && !self.check(&LTOK::EOF){
+                statmnts.push(self.eval_statmnt()?);
+            }
+            Ok(statmnts)
+        }
+
+        fn eval_expr(&mut self) -> Parser_ret<Expr>{
+            Ok(Expr::Null)
+        }
+        
         fn eval_if_else(&mut self) -> Parser_ret<&LTOK>{
             self.consume(&LTOK::IF)?;
             self.consume(&LTOK::LPAREN)?;
@@ -147,70 +285,8 @@ pub mod PARSER {
             Ok(&LTOK::SPECIAL_TOK)
         }
 
-        fn eval_let(&mut self) ->   Parser_ret<&LTOK>{
-            self.consume(&LTOK::LET)?;
-            let mut mut_flag = 0 ;
-            let mut varib_name = "".to_string();
-            match self.peek() {
-                &LTOK::MUT => {mut_flag= 1;
-                    varib_name = if let &LTOK::IDENT(x) = self.consume(&LTOK::)
-                
-                
-                }
-                &LTOK::IDENT(x) => {varib_name = x;
-                
-                
-                
-                
-                }
-                _ => {return Err(ParserError::UnexpectedToken { expected: "mut | <var>".to_string(), got:format!("{:?}",self.peek())});}
-            }
-
-
-            Ok(&LTOK::SPECIAL_TOK)
-        }
-//
-//        fn eval_if_else(&mut self) -> Option<AST_Node>{
-//        }
-//        
-//        fn eval_while(&mut self) -> Option<AST_Node>{
-//        }
-        
-        // Extremely simple that deals with runtime panics on is own since the eval_expr also deals with the untme panics
-//        fn eval_for(&mut self) -> Option<AST_Node>{
-//        }
-//
-//       fn eval_expr(&mut self)->Option<AST_Node>{
-//        }
-
-        fn binding_pow(tok : &LTOK) -> (i32,i32){ 
-            match *tok {
-                LTOK::LPAREN => (0,100),
-                LTOK::RPAREN => (100,0),
-                LTOK::BANG | LTOK::TILDA | LTOK::MODULO  => (0,99),
-                LTOK::DIV | LTOK::STAR => (60,61),
-                LTOK::PLUS | LTOK::MINUS => (50,51),
-                LTOK::LSHIFT | LTOK::RSHIFT => (45,46),
-                LTOK::AMP => (40, 41),
-                LTOK::CARET => (39, 40),
-                LTOK::PIPE => (38, 39),
-                LTOK::EQ | LTOK::N_EQ | LTOK::GT | LTOK::GT_EQ | LTOK::LT_EQ | LTOK::LT => (30, 31),
-                LTOK::ANDAND => (20, 21),
-                LTOK::OROR => (10, 11),
-                LTOK::S_AMP | LTOK::S_PIPE | LTOK::S_CARET |LTOK::S_PLUS |LTOK::S_MULT |LTOK::S_MINUS |LTOK::S_DIV |LTOK::S_MOD | LTOK::ASSGN => (0,1),
-                _ => (-1,-1),
-            }
-
-        }
-
-        fn Parse(&mut self) -> Parser_ret<Code> {         
-            let mut ret =  Vec::new();
-            while !self.check(&LTOK::EOF){
-                ret.push(self.eval_declare()?);
-            }
-            Ok(Code { Program: ret })
-        }
-
+    
+   
 
     }
 

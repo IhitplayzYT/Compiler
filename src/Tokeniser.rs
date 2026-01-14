@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#[allow(non_camel_case_types,non_snake_case,non_upper_case_globals,unused)]
+#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod Tokeniser {
     use crate::Lexer_Tok::Lex_Tok::LTOK;
     use once_cell::sync::Lazy;
@@ -25,17 +25,24 @@ pub mod Tokeniser {
             ("break", LTOK::BREAK),
             ("continue", LTOK::CONTINUE),
             ("return", LTOK::RETURN),
+            ("s8", LTOK::INT_TYPE),
+            ("s16", LTOK::INT_TYPE),
+            ("s32", LTOK::INT_TYPE),
+            ("s64", LTOK::INT_TYPE),
             ("i8", LTOK::INT_TYPE),
             ("i16", LTOK::INT_TYPE),
             ("i32", LTOK::INT_TYPE),
             ("i64", LTOK::INT_TYPE),
             ("int", LTOK::INT_TYPE),
+            ("short", LTOK::INT_TYPE),
+            ("char", LTOK::INT_TYPE),
             ("long", LTOK::INT_TYPE),
             ("f32", LTOK::FLOAT_TYPE),
             ("f64", LTOK::FLOAT_TYPE),
             ("float", LTOK::FLOAT_TYPE),
             ("double", LTOK::FLOAT_TYPE),
             ("string",LTOK::STRING_TYPE),
+            ("str",LTOK::STRING_TYPE),
             ("String",LTOK::STRING_TYPE),
         ])
     });
@@ -69,7 +76,7 @@ pub mod Tokeniser {
                     if count < 1 {
                         return Some(LTOK::INT((v.to_string()).parse().unwrap_or(0)));
                     } else if count == 1 {
-                        return Some(LTOK::FLOAT(v.to_string().trim().parse().unwrap_or_else(|e| {exit(-1);})));
+                        return Some(LTOK::FLOAT(v.to_string().trim().parse().unwrap_or_else(|_e| {exit(-1);})));
                     } else {
                         return Some(LTOK::STRING(v.to_string()));
                     }
