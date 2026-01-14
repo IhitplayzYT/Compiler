@@ -20,6 +20,7 @@ pub mod Tokeniser {
             ("if", LTOK::IF),
             ("else", LTOK::ELSE),
             ("while", LTOK::WHILE),
+            ("Loop", LTOK::LOOP),
             ("for", LTOK::FOR),
             ("fn", LTOK::FN),
             ("break", LTOK::BREAK),

@@ -5,10 +5,10 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
+
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod AST {
-    use crate::Lexer_Tok::Lex_Tok::LTOK;
-    use std::{cell::{Ref, RefCell}, rc::Rc};
+    use std::{cell::{RefCell}, rc::Rc};
     pub type link<T> = Rc<RefCell<T>>;
     
     #[derive(Clone,PartialEq,Debug)]

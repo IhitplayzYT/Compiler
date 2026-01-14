@@ -8,11 +8,7 @@
 
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod PARSER {
-    use std::{collections::HashMap, hash::Hash};
-    use std::rc::Rc;
-    use std::cell::RefCell;
-    use crate::Parser_Tok::Tokens::Token;
-    use crate::{Ast::{self, AST::{self,Code,Val,Type,BIN_OP,UN_OP,Declare,link,Statmnt,Expr}},Lexer_Tok::Lex_Tok::LTOK,Ident_table::Ident};
+    use crate::{Ast::{AST::{Code,Type,Declare,Statmnt,Expr}},Lexer_Tok::Lex_Tok::LTOK};
     use crate::Errors::Err::{ParserError,Parser_ret};
     pub struct Parser {
         input: Vec<LTOK>,
@@ -168,7 +164,43 @@ pub mod PARSER {
         /* ******************************** LET & CONST ********************************  */
 
         /* ******************************** IF-ELSE ********************************  */
+
+        fn eval_if_else(&mut self) -> Parser_ret<Statmnt>{
+            self.consume(&LTOK::IF)?;
+           
+            let cond = self.eval_expr()?;
+            self.consume(&LTOK::LBRACE)?;
+            let then_branch = self.eval_block()?;
+            self.consume(&LTOK::RBRACE)?;
+
+
+            let else_branch = if self.match_token(&[LTOK::ELSE]) {
+                if self.check(&LTOK::IF){
+                    Some(vec![self.eval_if_else()?])
+                }else{
+                    self.consume(&LTOK::LBRACE)?;
+                   let bl = self.eval_block()?;
+                   self.consume(&LTOK::RBRACE)?;
+                   Some(bl)
+
+                }
+            }else{
+                None
+            };
+                       
+            Ok(Statmnt::If { cond , then_branch, else_branch })
+        }
+
         /* ******************************** IF-ELSE ********************************  */
+
+
+
+        /* ******************************** FOR-WHILE-LOOP ********************************  */
+
+
+        
+        /* ******************************** FOR-WHILE-LOOP ********************************  */
+
 
 
         /* ******************************** HELPER ********************************  */
@@ -260,32 +292,7 @@ pub mod PARSER {
             Ok(Expr::Null)
         }
         
-        fn eval_if_else(&mut self) -> Parser_ret<&LTOK>{
-            self.consume(&LTOK::IF)?;
-            self.consume(&LTOK::LPAREN)?;
-            let cond = self.eval_expr()?;
-            self.consume(&LTOK::RPAREN)?;
-            self.consume(&LTOK::LBRACE)?;
-            let if_block = self.eval_block()?;
-            self.consume(&LTOK::RBRACE)?;
-
-            let else_block = {
-            if let &LTOK::ELSE = self.peek(){
-                self.consume(&LTOK::LBRACE)?;
-                let else_block = self.eval_block()?;
-                self.consume(&LTOK::RBRACE)?;
-                else_block
-            }
-            else{
-                None
-            }
-        };
-          // (xx)
-
-            Ok(&LTOK::SPECIAL_TOK)
-        }
-
-    
+           
    
 
     }

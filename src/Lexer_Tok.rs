@@ -8,7 +8,6 @@
 
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod Lex_Tok {
-    // For compound assignment operators
     #[derive(Debug, Clone, PartialEq)]
     pub enum LTOK {
         LET,            // -> let (Varib Declaring)
@@ -17,11 +16,12 @@ pub mod Lex_Tok {
         IF,             // -> (If conditional for Statement && Expr)
         ELSE,           // -> (Else conditional for Statement && Expr)
         WHILE,          // -> (Conditional Loop over Iterable)
+        LOOP,           // -> (Unconditional Infinite Loop over Iterable)
         FOR,            // ->  (Iterative Loop over Iterable)
-        FN,             // -> (Function Declaration KeyWord)
-        BREAK,
-        CONTINUE,
-        RETURN,
+        FN,             // -> (Function Declaration Keyword supporting both C and Rust based loops)
+        BREAK,          // -> Standard break 
+        CONTINUE,       // -> Standard continue
+        RETURN,         // -> Standard return 
         IDENT(String),  // -> Identifier
         STRING(String), // -> Can be any string
         INT(i64),       // -> To identify whole numbers
@@ -65,13 +65,13 @@ pub mod Lex_Tok {
         COLON,          // -> (:)
         COMMA,          // -> (,)
         NULL,           // -> (None/Null)   
-        EOF,            // -> ('')          (X)
+        EOF,            // -> ('')        
         QUOTE,          // -> (')
         DQUOTE,         // -> (")
         ARROW,          // -> (->)
-        INT_TYPE,
-        FLOAT_TYPE,
-        STRING_TYPE,
-        SPECIAL_TOK     // -> Special token used by Parser inner workings 
+        INT_TYPE,       // -> i64_type
+        FLOAT_TYPE,     // -> f64_type
+        STRING_TYPE,    // -> string_type
+        SPECIAL_TOK     // -> Special token used by Parser to report succesful parse of tokens 
     }
 }
