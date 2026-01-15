@@ -16,6 +16,18 @@ Invalid_Code,
 Custom(String),
 }
 
+impl ParserError{
+    fn show(&mut self) {
+    println!("{:?}",match self {
+        ParserError::Custom(x) => x.to_owned(),
+        ParserError::Invalid_Code => "Invalid syntax".to_string(),
+        _ => "BROKEN ERROR[FATAL]".to_string(),
+    });
+}
+
+
+}
+
 
 pub type Parser_ret<T> = Result<T,ParserError>;
 }

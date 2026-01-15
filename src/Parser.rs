@@ -22,7 +22,7 @@ pub mod PARSER {
         /* ******************************** CONSTRUCTOR ********************************  */
 
 
-        /* ******************************** API ********************************  */
+        /* ******************************** MAIN ********************************  */
         fn Parse(&mut self) -> Parser_ret<Code> {         
             let mut ret =  Vec::new();
             while !self.check(&LTOK::EOF){
@@ -30,7 +30,7 @@ pub mod PARSER {
             }
             Ok(Code { Program: ret })
         }
-        /* ******************************** API ********************************  */
+        /* ******************************** MAIN ********************************  */
 
 
         /* ******************************** HELPER ********************************  */
@@ -58,15 +58,16 @@ pub mod PARSER {
                     return true;
                 }
             }
-            false}
+            false
+        }
 
 
         fn consume(&mut self,e: &LTOK) -> Parser_ret<LTOK>{
-         if self.check(e) {
-            return Ok(self.next());
-         }
-         Err(ParserError::UnexpectedToken { expected:format!("{:?}",e.clone()), got:format!("{:?}",self.peek().clone()) })}
-
+            if self.check(e) {
+                return Ok(self.next());
+            }
+            Err(ParserError::UnexpectedToken { expected:format!("{:?}",e.clone()), got:format!("{:?}",self.peek().clone()) })
+        }
 
         /* ******************************** HELPER ********************************  */
 
@@ -85,7 +86,7 @@ pub mod PARSER {
 
         let name = match self.next(){
             LTOK::IDENT(x) => x,
-            tok => {return Err(ParserError::UnexpectedToken{expected:"Fxn name\n".to_string(),got:format!("{:?}",tok)});}};
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Fxn name".to_string(),got:format!("{:?}",tok)});}};
 
         self.consume(&LTOK::LPAREN)?;
 
@@ -94,8 +95,8 @@ pub mod PARSER {
         self.consume(&LTOK::RPAREN)?;
 
         let rtype = 
-        if self.match_token(&[LTOK::ARROW]) {Some(self.eval_type().unwrap())}
-        else{None};
+            if self.match_token(&[LTOK::ARROW]) {Some(self.eval_type().unwrap())}
+            else{None};
 
         let body = self.eval_block()?;
         self.consume(&LTOK::RBRACE)?;
@@ -127,14 +128,14 @@ pub mod PARSER {
         self.consume(&LTOK::LET)?;
         let mutable = self.match_token(&[LTOK::MUT]);
         let name: String = match self.next() {
-        LTOK::IDENT(x) => x,
-        t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!(":?",t)})
+            LTOK::IDENT(x) => x,
+            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!("{:?}",t)})
         };
         let annot = if self.match_token(&[LTOK::COLON]) {
-        Some(self.eval_type()?)
+            Some(self.eval_type()?)
         }
         else{
-        None
+            None
         };
 
         self.consume(&LTOK::ASSGN)?;
@@ -147,13 +148,13 @@ pub mod PARSER {
             self.consume(&LTOK::CONST)?;
             let name: String = match self.next() {
             LTOK::IDENT(x) => x,
-            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!(":?",t)})
+            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!("{:?}",t)})
             };
             let annot = if self.match_token(&[LTOK::COLON]) {
-            Some(self.eval_type()?)
+                Some(self.eval_type()?)
             }
             else{
-            None
+                None
             };
             self.consume(&LTOK::ASSGN)?;
             let val = self.eval_expr()?;
@@ -182,11 +183,10 @@ pub mod PARSER {
                    let bl = self.eval_block()?;
                    self.consume(&LTOK::RBRACE)?;
                    Some(bl)
-
                 }
-            }else{
-                None
-            };
+                }else{
+                    None
+                };
                        
             Ok(Statmnt::If { cond , then_branch, else_branch })
         }
@@ -197,6 +197,37 @@ pub mod PARSER {
 
         /* ******************************** FOR-WHILE-LOOP ********************************  */
 
+        fn eval_for(&mut self) -> Parser_ret<Statmnt>{
+            self.consume(&LTOK::FOR)?;
+            let var_name = match self.next() {
+                LTOK::IDENT(x) => x,
+                _ => return Err(ParserError::Invalid_Code),
+            };
+            
+            let lb = self.eval_expr()?;
+            let rb = self.eval_expr()?;
+            self.consume(&LTOK::LBRACE)?;
+            let body = self.eval_block()?;
+            self.consume(&LTOK::RBRACE)?;   
+            Ok(Statmnt::For { var_name, lb, rb, body })
+        }
+
+        fn eval_while(&mut self) -> Parser_ret<Statmnt> {
+            self.consume(&LTOK::WHILE)?;
+            let cond = self.eval_expr()?;
+            self.consume(&LTOK::LBRACE)?;
+            let body = self.eval_block()?;
+            self.consume(&LTOK::RBRACE)?;
+            Ok(Statmnt::While { cond, body })
+        }
+
+        fn eval_loop(&mut self) -> Parser_ret<Statmnt>{
+        self.consume(&LTOK::LOOP)?;
+        self.consume(&LTOK::LBRACE)?;
+        let body = self.eval_block()?;
+        self.consume(&LTOK::RBRACE)?;    
+        Ok(Statmnt::Loop { body })
+        }
 
         
         /* ******************************** FOR-WHILE-LOOP ********************************  */
@@ -234,6 +265,16 @@ pub mod PARSER {
 
         }
 
+        fn eval_return(&mut self) -> Parser_ret<Statmnt> {
+            self.consume(&LTOK::RETURN)?;
+            let val = match self.next() {
+                LTOK::SEMICOLON => None,
+                _ => Some(self.eval_expr()?),
+            };
+
+            Ok(Statmnt::Return(val))
+        }
+
         fn eval_tuple_types(&mut self) -> Parser_ret<Vec<Type>>{
             let mut ret = Vec::new();
             while !self.check(&LTOK::LPAREN){
@@ -247,13 +288,17 @@ pub mod PARSER {
 
         /* ******************************** HELPER ********************************  */
 
+
+    
+    /* ******************************** BLOCKS & STATEMENTS ********************************  */
+
         fn eval_statmnt(&mut self) -> Parser_ret<Statmnt>{
             match self.peek() {
                 LTOK::LET => {self.eval_let()},
-                LTOK::CONST => {self.eval_const();},
-                LTOK::IF  => {self.eval_if();},
-                LTOK::WHILE => {self.eval_while();},
-                LTOK::FOR => {self.eval_for();},
+                LTOK::CONST => {self.eval_const()},
+                LTOK::IF  => {self.eval_if_else()},
+                LTOK::WHILE => {self.eval_while()},
+                LTOK::FOR => {self.eval_for()},
                 
                 LTOK::BREAK => {
                 self.next();
@@ -268,14 +313,13 @@ pub mod PARSER {
                 },
 
                 LTOK::RETURN => self.eval_return(),
-
                 LTOK::LBRACE => {
                     self.next();
                     let blk = self.eval_block()?;
                     self.consume(&LTOK::RBRACE)?;
                     Ok(Statmnt::Block(blk))
                 },
-                _ => eval_expr()
+                _ => self.eval_reassign(),
 
             }  
         }
@@ -288,12 +332,24 @@ pub mod PARSER {
             Ok(statmnts)
         }
 
+    /* ******************************** BLOCKS & STATEMENTS ********************************  */
+
+    /* ******************************** EXPRESSIONS ********************************  */
+
+
         fn eval_expr(&mut self) -> Parser_ret<Expr>{
-            Ok(Expr::Null)
+            
         }
+
+        fn eval_reassign(&mut self) - > Parser_ret<Expr> {
+
+
+        }
+        
         
            
    
+    /* ******************************** EXPRESSIONS ********************************  */
 
     }
 

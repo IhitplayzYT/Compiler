@@ -94,16 +94,13 @@ pub mod AST {
             cond: Expr, // While loop
             body: Vec<Statmnt>,
         },
-        For_C {
-            init: Vec<Expr>,
-            cond: Option<Expr>, // For loop SYNTAX : C
-            step: Option<Expr>,
-            body: Vec<Statmnt>,
-        },
-        For_Rust{
+        For{
             var_name: String, // For loop SYNTAX : Rust
             lb: Expr,
             rb: Expr,
+            body:Vec<Statmnt>,
+        },
+        Loop{
             body:Vec<Statmnt>,
         },
         Expr(Expr),
