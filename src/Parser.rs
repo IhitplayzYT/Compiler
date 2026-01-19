@@ -8,7 +8,9 @@
 
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod PARSER {
-    use crate::{Ast::{AST::{Code,Type,Declare,Statmnt,Expr}},Lexer_Tok::Lex_Tok::LTOK};
+    use std::{arch::x86_64::_MM_FROUND_NO_EXC, sync::OnceState};
+
+    use crate::{Ast::{AST::{Code,Type,Declare,Statmnt,Expr,BIN_OP,UN_OP}},Lexer_Tok::Lex_Tok::LTOK};
     use crate::Errors::Err::{ParserError,Parser_ret};
     pub struct Parser {
         input: Vec<LTOK>,
@@ -336,18 +338,147 @@ pub mod PARSER {
 
     /* ******************************** EXPRESSIONS ********************************  */
 
-
-        fn eval_expr(&mut self) -> Parser_ret<Expr>{
-            
+        fn eval_reassign(&mut self) -> Parser_ret<Statmnt> {
+            let expr = self.eval_expr()?;
+            if self.match_token(&[LTOK::ASSGN]){
+                if let Expr::Ident(name)  = expr{
+                let val = self.eval_expr()?;
+                self.consume(&LTOK::SEMICOLON)?;
+                return Ok(Statmnt::Assignment { name, val });
+                } else{
+                    return Err(ParserError::Custom("Invalid Syntax".to_string()));
+                }
+            }else{
+                self.consume(&LTOK::SEMICOLON)?;
+                return Ok(Statmnt::Expr(expr));
+            }
         }
 
-        fn eval_reassign(&mut self) - > Parser_ret<Expr> {
 
+    fn eval_expr(&mut self) -> Parser_ret<Expr>{
+        return self.eval_logical_or();
+    }
 
+    fn eval_logical_or(&mut self) -> Parser_ret<Expr>{
+        let mut left = self.eval_logical_and()?;
+
+        while self.match_token(&[LTOK::OROR]){
+            let right = self.eval_logical_and()?;
+            left = Expr::Binary_op{op:BIN_OP::Or, left:Box::new(left), right:Box::new(right) };
         }
+
+        Ok(left)
+    }
         
-        
-           
+    fn eval_logical_and(&mut self) -> Parser_ret<Expr>{
+        let mut left = self.eval_logical_and()?;
+
+        while self.match_token(&[LTOK::AND]){
+            let right = self.eval_equaility()?;
+            left = Expr::Binary_op{op:BIN_OP::And, left:Box::new(left), right:Box::new(right) };
+        }
+        Ok(left)
+    }
+
+
+    fn eval_equaility(&mut self) -> Parser_ret<Expr>{
+        let mut left = self.eval_comparator()?;
+        while let Some(op) = self.,match_eq_neq(){
+            let right = self.eval_comparator()?;
+            left = Expr::Binary_op { op:BIN_OP::Eq, left: Box::new(left), right:Box::new(right)};
+        }
+        Ok(left)
+    }
+
+    fn match_eq_neq(&mut self) -> Option<BIN_OP>{
+        match self.peek() {
+            LTOK::EQ => {
+                self.next();
+                return Some(BIN_OP::Eq);},
+            LTOK::N_EQ => {self.next();
+                return Some(BIN_OP::N_eq);},
+            _ => {return None},
+        };
+    }
+
+    fn eval_comparator(&mut self) -> Parser_ret<Expr>{
+        let mut left = self.parse_term()?;
+        while let Some(x) =self.match_comparison(){
+            let right = self.parse_term()?;
+            left = Expr::Binary_op { op:x, left: Box::new(left), right:Box::new(right)}
+        };
+        Ok(left)
+    }
+
+    fn match_comparison(&mut self) -> Option<BIN_OP>{
+        match self.next() {
+            LTOK::LT => {self.next();Some(BIN_OP::Lt)},
+            LTOK::LT_EQ => {self.next();Some(BIN_OP::Lt_eq)},
+            LTOK::GT => {self.next();Some(BIN_OP::Gt)},
+            LTOK::GT_EQ => {self.next();Some(BIN_OP::Gt_eq)},
+            _ => None,
+        }
+    }
+
+    fn parse_term(&mut self) ->Parser_ret<Expr>{
+        let left = self.parse_factor()?;
+        while let Some(op) = self.match_term_op(){
+            let right = self.parse_factor()?;
+            left = Expr::Binary_op { op, left: Box::new(left), right: Box::new(right) };
+        }
+        Ok(left)
+    }
+
+    fn match_term_op(&mut self) -> Option<BIN_OP>{
+        match self.peek()  {
+            LTOK::PLUS => {self.next();Some(BIN_OP::Add)},
+            LTOK::MINUS => {self.next();Some(BIN_OP::Sub)},
+            _ => None,
+        }
+    }
+
+
+    fn parse_factor(&mut self) -> Parser_ret<Expr>{
+        let left = self.eval_unary()?;
+        while let Some(op) = self.match_factor_op(){
+            let right = self.eval_unary()?;
+            left = Expr::Binary_op { op, left: Box::new(left), right: Box::new(right)};
+        }
+        Ok(left)
+    }
+
+    fn match_factor_op(&mut self) -> Option<BIN_OP>{
+        match self.next(){
+        LTOK::STAR => {self.next();Some(BIN_OP::Mul)},
+        LTOK::DIV => {self.next();Some(BIN_OP::Div)},
+        LTOK::MODULO => {self.next();Some(BIN_OP::Mod)},
+        _ => None,
+        }
+    }
+
+
+    fn eval_unary(&mut self) -> Parser_ret<Expr>{
+        match self.peek(){
+        LTOK::MINUS => {
+            self.next();
+            let operand = self.eval_unary()?;
+            Ok(Expr::Unary_op { op:UN_OP::Neg, operand: Box::new(operand) })
+        },
+        LTOK::BANG => {
+            self.next();
+            let operand= self.eval_unary()?;
+            Ok(Expr::Unary_op { op:UN_OP::Bang, operand: Box::new(operand) })
+        },
+        _ => Err(ParserError::Invalid_Code),
+        }    
+    }
+
+
+//TODO: NEED TO ADD SHORTHAND OPERTAORS AS BINARY OPERATORS
+
+
+
+
    
     /* ******************************** EXPRESSIONS ********************************  */
 

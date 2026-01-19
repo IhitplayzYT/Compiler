@@ -47,13 +47,13 @@ pub mod AST {
 
         Binary_op {
             op: BIN_OP, // Represents the Node for an operator
-            left: link<Expr>,  // Unary ops such as shorthands can be represented by considering the left pointer ab the variable on which the unary op being done
-            right: link<Expr>
+            left: Box<Expr>,  // Unary ops such as shorthands can be represented by considering the left pointer ab the variable on which the unary op being done
+            right: Box<Expr>
         },
 
         Unary_op{
             op:UN_OP,
-            operand: link<Expr>,
+            operand: Box<Expr>,
         },
 
         Fxn_call{
