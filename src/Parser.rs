@@ -8,24 +8,23 @@
 
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
 pub mod PARSER {
-    use std::{arch::x86_64::_MM_FROUND_NO_EXC, sync::OnceState};
 
     use crate::{Ast::{AST::{Code,Type,Declare,Statmnt,Expr,BIN_OP,UN_OP}},Lexer_Tok::Lex_Tok::LTOK};
     use crate::Errors::Err::{ParserError,Parser_ret};
     pub struct Parser {
-        input: Vec<LTOK>,
-        idx:usize,
+        pub input: Vec<LTOK>,
+        pub idx:usize,
     }
     impl Parser{
         /* ******************************** CONSTRUCTOR ********************************  */
-        fn new(v:Vec<LTOK>) -> Self{
+        pub fn new(v:Vec<LTOK>) -> Self{
             Self{input:v,idx:0}
         }
         /* ******************************** CONSTRUCTOR ********************************  */
 
 
         /* ******************************** MAIN ********************************  */
-        fn Parse(&mut self) -> Parser_ret<Code> {         
+        pub fn Parse(&mut self) -> Parser_ret<Code> {         
             let mut ret =  Vec::new();
             while !self.check(&LTOK::EOF){
                 ret.push(self.eval_declare()?);
@@ -373,7 +372,7 @@ pub mod PARSER {
     fn eval_logical_and(&mut self) -> Parser_ret<Expr>{
         let mut left = self.eval_logical_and()?;
 
-        while self.match_token(&[LTOK::AND]){
+        while self.match_token(&[LTOK::ANDAND]){
             let right = self.eval_equaility()?;
             left = Expr::Binary_op{op:BIN_OP::And, left:Box::new(left), right:Box::new(right) };
         }
@@ -383,7 +382,7 @@ pub mod PARSER {
 
     fn eval_equaility(&mut self) -> Parser_ret<Expr>{
         let mut left = self.eval_comparator()?;
-        while let Some(op) = self.,match_eq_neq(){
+        while let Some(op) = self.match_eq_neq(){
             let right = self.eval_comparator()?;
             left = Expr::Binary_op { op:BIN_OP::Eq, left: Box::new(left), right:Box::new(right)};
         }
@@ -421,7 +420,7 @@ pub mod PARSER {
     }
 
     fn parse_term(&mut self) ->Parser_ret<Expr>{
-        let left = self.parse_factor()?;
+        let mut left = self.parse_factor()?;
         while let Some(op) = self.match_term_op(){
             let right = self.parse_factor()?;
             left = Expr::Binary_op { op, left: Box::new(left), right: Box::new(right) };
@@ -439,7 +438,7 @@ pub mod PARSER {
 
 
     fn parse_factor(&mut self) -> Parser_ret<Expr>{
-        let left = self.eval_unary()?;
+        let mut left = self.eval_unary()?;
         while let Some(op) = self.match_factor_op(){
             let right = self.eval_unary()?;
             left = Expr::Binary_op { op, left: Box::new(left), right: Box::new(right)};

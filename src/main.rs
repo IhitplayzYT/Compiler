@@ -16,6 +16,7 @@ mod Semantic_Analysis;
 mod Ident_table;
 mod Tokeniser;
 mod Errors;
+mod Compiler;
 use std::env;
 
 use crate::Helper::utilities::read_file;
