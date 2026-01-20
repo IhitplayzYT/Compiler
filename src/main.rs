@@ -17,6 +17,7 @@ mod Ident_table;
 mod Tokeniser;
 mod Errors;
 mod Compiler;
+mod printer;
 use std::env;
 
 use crate::Helper::utilities::read_file;
@@ -27,6 +28,7 @@ fn main() {
         std::process::exit(0);
     }
     let file = read_file(&arguments[1]).unwrap_or_else(|_e| std::process::exit(0));
+    let file= file.replace(".."," ; ");
 
     let mut LEXER = Tokeniser::Tokeniser::Lexer::new(file);
     LEXER.Tokenise();

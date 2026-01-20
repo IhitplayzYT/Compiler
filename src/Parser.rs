@@ -87,7 +87,7 @@ pub mod PARSER {
 
         let name = match self.next(){
             LTOK::IDENT(x) => x,
-            tok => {return Err(ParserError::UnexpectedToken{expected:"Fxn name".to_string(),got:format!("{:?}",tok)});}};
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Function name".to_string(),got:format!("{:?}",tok)});}};
 
         self.consume(&LTOK::LPAREN)?;
 
@@ -110,7 +110,7 @@ pub mod PARSER {
             loop{
                 let name = match self.next() {
                     LTOK::IDENT(x) => x,
-                    t => {return Err(ParserError::UnexpectedToken { expected: "Parameter".to_string(), got: format!("{:?}", t) })}
+                    t => {return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got: format!("{:?}", t) })}
                 };
                 self.consume(&LTOK::COLON)?;
                 let type_varib = self.eval_type()?;
@@ -130,7 +130,7 @@ pub mod PARSER {
         let mutable = self.match_token(&[LTOK::MUT]);
         let name: String = match self.next() {
             LTOK::IDENT(x) => x,
-            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!("{:?}",t)})
+            t => return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got:  format!("{:?}",t)})
         };
         let annot = if self.match_token(&[LTOK::COLON]) {
             Some(self.eval_type()?)
@@ -149,7 +149,7 @@ pub mod PARSER {
             self.consume(&LTOK::CONST)?;
             let name: String = match self.next() {
             LTOK::IDENT(x) => x,
-            t => return Err(ParserError::UnexpectedToken { expected: "VARIB_NAME".to_string(), got:  format!("{:?}",t)})
+            t => return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got:  format!("{:?}",t)})
             };
             let annot = if self.match_token(&[LTOK::COLON]) {
                 Some(self.eval_type()?)
@@ -202,9 +202,9 @@ pub mod PARSER {
             self.consume(&LTOK::FOR)?;
             let var_name = match self.next() {
                 LTOK::IDENT(x) => x,
-                _ => return Err(ParserError::Invalid_Code),
+                _ => return Err(ParserError::Custom("Provide an identifier to store iterator results".to_string())),
             };
-            
+            self.consume(&LTOK::IN)?;
             let lb = self.eval_expr()?;
             let rb = self.eval_expr()?;
             self.consume(&LTOK::LBRACE)?;
@@ -244,26 +244,6 @@ pub mod PARSER {
                 LTOK::STRING_TYPE => Ok(Type::STRING),
                 z => Err(ParserError::UnexpectedToken { expected: "INT|FLOAT|STRING".to_string(), got:  format!("{:?}",z)})
             }
-        }
-
-        fn binding_pow(tok : &LTOK) -> (i32,i32){ 
-            match *tok {
-                LTOK::LPAREN => (0,100),
-                LTOK::RPAREN => (100,0),
-                LTOK::BANG | LTOK::TILDA | LTOK::MODULO  => (0,99),
-                LTOK::DIV | LTOK::STAR => (60,61),
-                LTOK::PLUS | LTOK::MINUS => (50,51),
-                LTOK::LSHIFT | LTOK::RSHIFT => (45,46),
-                LTOK::AMP => (40, 41),
-                LTOK::CARET => (39, 40),
-                LTOK::PIPE => (38, 39),
-                LTOK::EQ | LTOK::N_EQ | LTOK::GT | LTOK::GT_EQ | LTOK::LT_EQ | LTOK::LT => (30, 31),
-                LTOK::ANDAND => (20, 21),
-                LTOK::OROR => (10, 11),
-                LTOK::S_AMP | LTOK::S_PIPE | LTOK::S_CARET |LTOK::S_PLUS |LTOK::S_MULT |LTOK::S_MINUS |LTOK::S_DIV |LTOK::S_MOD | LTOK::ASSGN => (0,1),
-                _ => (-1,-1),
-            }
-
         }
 
         fn eval_return(&mut self) -> Parser_ret<Statmnt> {
@@ -320,7 +300,7 @@ pub mod PARSER {
                     self.consume(&LTOK::RBRACE)?;
                     Ok(Statmnt::Block(blk))
                 },
-                _ => self.eval_reassign(),
+                _ => self.eval_assign(),
 
             }  
         }
@@ -337,21 +317,20 @@ pub mod PARSER {
 
     /* ******************************** EXPRESSIONS ********************************  */
 
-        fn eval_reassign(&mut self) -> Parser_ret<Statmnt> {
-            let expr = self.eval_expr()?;
-            if self.match_token(&[LTOK::ASSGN]){
-                if let Expr::Ident(name)  = expr{
+    fn eval_assign(&mut self) -> Parser_ret<Statmnt> {
+        let expr = self.eval_expr()?;
+        if let Some(op) = self.match_assignment(){
+            if let Expr::Ident(name) = expr{
                 let val = self.eval_expr()?;
                 self.consume(&LTOK::SEMICOLON)?;
-                return Ok(Statmnt::Assignment { name, val });
-                } else{
-                    return Err(ParserError::Custom("Invalid Syntax".to_string()));
-                }
-            }else{
-                self.consume(&LTOK::SEMICOLON)?;
-                return Ok(Statmnt::Expr(expr));
+                return Ok(Statmnt::Assignment { name, op, val });
+            } else{
+            return Err(ParserError::Custom("Invalid assignment\n".to_string()))
             }
         }
+        self.consume(&LTOK::SEMICOLON)?;
+        Ok(Statmnt::Expr(expr))
+   }
 
 
     fn eval_expr(&mut self) -> Parser_ret<Expr>{
@@ -370,21 +349,21 @@ pub mod PARSER {
     }
         
     fn eval_logical_and(&mut self) -> Parser_ret<Expr>{
-        let mut left = self.eval_logical_and()?;
+        let mut left = self.eval_equality()?;
 
         while self.match_token(&[LTOK::ANDAND]){
-            let right = self.eval_equaility()?;
+            let right = self.eval_equality()?;
             left = Expr::Binary_op{op:BIN_OP::And, left:Box::new(left), right:Box::new(right) };
         }
         Ok(left)
     }
 
 
-    fn eval_equaility(&mut self) -> Parser_ret<Expr>{
+    fn eval_equality(&mut self) -> Parser_ret<Expr>{
         let mut left = self.eval_comparator()?;
         while let Some(op) = self.match_eq_neq(){
             let right = self.eval_comparator()?;
-            left = Expr::Binary_op { op:BIN_OP::Eq, left: Box::new(left), right:Box::new(right)};
+            left = Expr::Binary_op { op, left: Box::new(left), right:Box::new(right)};
         }
         Ok(left)
     }
@@ -410,7 +389,7 @@ pub mod PARSER {
     }
 
     fn match_comparison(&mut self) -> Option<BIN_OP>{
-        match self.next() {
+        match self.peek() {
             LTOK::LT => {self.next();Some(BIN_OP::Lt)},
             LTOK::LT_EQ => {self.next();Some(BIN_OP::Lt_eq)},
             LTOK::GT => {self.next();Some(BIN_OP::Gt)},
@@ -418,6 +397,50 @@ pub mod PARSER {
             _ => None,
         }
     }
+
+    fn match_assignment(&mut self) -> Option<Option<BIN_OP>>{
+    match self.peek(){
+        LTOK::ASSGN => {
+            self.next();
+            Some(None)
+        },
+        LTOK::S_PLUS => {
+            self.next();
+            Some(Some(BIN_OP::Add))
+        },
+        LTOK::S_MINUS => {
+            self.next();
+            Some(Some(BIN_OP::Sub))
+        },    
+        LTOK::S_MULT => {
+            self.next();
+            Some(Some(BIN_OP::Mul))
+        },    
+        LTOK::S_DIV => {
+            self.next();
+            Some(Some(BIN_OP::Div))
+        },
+        LTOK::S_MOD => {
+            self.next();
+            Some(Some(BIN_OP::Mod))
+        },
+        LTOK::S_AMP => {
+            self.next();
+            Some(Some(BIN_OP::Amp))
+        },    
+        LTOK::S_PIPE => {
+            self.next();
+            Some(Some(BIN_OP::Pipe))
+        },    
+        LTOK::S_CARET => {
+            self.next();
+            Some(Some(BIN_OP::Xor))
+        },
+        _ => None,
+    }
+    }
+
+
 
     fn parse_term(&mut self) ->Parser_ret<Expr>{
         let mut left = self.parse_factor()?;
@@ -436,7 +459,6 @@ pub mod PARSER {
         }
     }
 
-
     fn parse_factor(&mut self) -> Parser_ret<Expr>{
         let mut left = self.eval_unary()?;
         while let Some(op) = self.match_factor_op(){
@@ -447,7 +469,7 @@ pub mod PARSER {
     }
 
     fn match_factor_op(&mut self) -> Option<BIN_OP>{
-        match self.next(){
+        match self.peek(){
         LTOK::STAR => {self.next();Some(BIN_OP::Mul)},
         LTOK::DIV => {self.next();Some(BIN_OP::Div)},
         LTOK::MODULO => {self.next();Some(BIN_OP::Mod)},
@@ -467,16 +489,63 @@ pub mod PARSER {
             self.next();
             let operand= self.eval_unary()?;
             Ok(Expr::Unary_op { op:UN_OP::Bang, operand: Box::new(operand) })
+        },LTOK::TILDA => {
+            self.next();
+            let operand= self.eval_unary()?;
+            Ok(Expr::Unary_op { op:UN_OP::Tilda, operand: Box::new(operand) })
         },
-        _ => Err(ParserError::Invalid_Code),
+        _ => self.eval_fxn_call(),
         }    
     }
 
+    fn eval_fxn_call(&mut self) -> Parser_ret<Expr>{
+        let mut expr = self.eval_primary()?;
+        loop {
+            match self.peek() {
+                LTOK::LPAREN => {
+                    self.next();
+                    let args = self.eval_args()?;
+                    self.consume(&LTOK::RPAREN)?;
+                    if let Expr::Ident(x) = expr{
+                        expr = Expr::Fxn_call { name:x, args:args };
+                    }else{
+                        return Err(ParserError::Invalid_Code);
+                    }
 
-//TODO: NEED TO ADD SHORTHAND OPERTAORS AS BINARY OPERATORS
+                }
+                _ => break,
+            }
 
+        }
+        Ok(expr)
+    }
 
+    fn eval_args(&mut self) -> Parser_ret<Vec<Expr>> {
+        let mut ret = Vec::new();
+        if !self.check(&LTOK::RPAREN){
+            loop{
+                ret.push(self.eval_expr()?);
+                if !self.match_token(&[LTOK::COMMA]){
+                    break;
+                }
+            }
+        };
+        Ok(ret)
+    }
+    fn eval_primary(&mut self) -> Parser_ret<Expr> {
+        match self.next() {
+            LTOK::INT(x) => Ok(Expr::Int(x)),
+            LTOK::FLOAT(x) => Ok(Expr::Float(x)),
+            LTOK::STRING(x) => Ok(Expr::String(x)),
+            LTOK::LPAREN => {
+                let expr = self.eval_expr()?;
+                self.consume(&LTOK::RPAREN);
+                Ok(expr)
+            }
+            _ => Err(ParserError::Invalid_Code),
 
+        }
+    }
 
    
     /* ******************************** EXPRESSIONS ********************************  */
