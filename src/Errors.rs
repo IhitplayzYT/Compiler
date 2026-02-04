@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
+#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code)]
 pub mod Err{
 
 #[derive(Debug,Clone)]
@@ -19,9 +19,9 @@ Custom(String),
 impl ParserError{
     fn show(&mut self) {
     println!("{:?}",match self {
+        ParserError::UnexpectedToken{expected,got} => format!("Expected: {} but Got: {}",expected,got),
         ParserError::Custom(x) => x.to_owned(),
         ParserError::Invalid_Code => "Invalid syntax".to_string(),
-        _ => "BROKEN ERROR[FATAL]".to_string(),
     });
 }
 

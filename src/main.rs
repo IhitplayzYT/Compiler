@@ -20,7 +20,6 @@ mod Compiler;
 mod printer;
 use std::env;
 
-use crate::{Helper::utilities::read_file, printer::printer::Components};
 
 fn main() {
     let arguments: Vec<String> = env::args().collect();

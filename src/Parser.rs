@@ -16,6 +16,7 @@ pub mod PARSER {
         pub idx:usize,
         pub ast:Option<Code>,
     }
+
     impl Parser{
         /* ******************************** CONSTRUCTOR ********************************  */
         pub fn new(v:Vec<LTOK>) -> Self{
@@ -284,6 +285,7 @@ pub mod PARSER {
                 LTOK::IF  => {self.eval_if_else()},
                 LTOK::WHILE => {self.eval_while()},
                 LTOK::FOR => {self.eval_for()},
+                LTOK::LOOP => {self.eval_loop()},
                 
                 LTOK::BREAK => {
                 self.next();

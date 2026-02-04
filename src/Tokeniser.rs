@@ -10,7 +10,7 @@
 pub mod Tokeniser {
     use crate::Lexer_Tok::Lex_Tok::LTOK;
     use once_cell::sync::Lazy;
-    use std::{collections::HashMap, fs, ops::Index, process::exit};
+    use std::{collections::HashMap, fs, process::exit};
 
     pub static ALLOWED_KEYWORDS: Lazy<HashMap<&'static str, LTOK>> = Lazy::new(|| {
         HashMap::from([
@@ -65,7 +65,7 @@ pub mod Tokeniser {
         }
 
         pub fn print_tok(&self){
-            if (!self.is_lexed()){
+            if !self.is_lexed() {
              println!("Use Tokeniser before printing!");      
             }
             println!("{:?}",self.Lexer_Output);
@@ -82,6 +82,9 @@ pub mod Tokeniser {
             if let Some(y) = ALLOWED_KEYWORDS.get(v) {
                 return Some(y.clone());
             } else {
+                if v.contains("..") {
+                    return Some(LTOK::RANGE);
+                }
                 if v.chars().all(|c| c.is_ascii_digit() || c == '.') {
                     let count = v.chars().filter(|&c| c == '.').count();
                     if count < 1 {
