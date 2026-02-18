@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code)]
+#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code,unused_imports)]
 
 pub mod Frontend {
     use crate::Parser::PARSER::{Parser};
@@ -29,7 +29,7 @@ panic!("FATAL INTERNAL ERROR IN COMPILER");
 self.parser = Some(Parser::new(self.lexer.Lexer_Output.clone()));
 
 // TODO:
-let ast = self.parser.as_mut().unwrap().Parse();
+let _ast = self.parser.as_mut().unwrap().Parse();
 //  ADD SEMANTIC ANALYSER TO THE CHAIN
 }
 

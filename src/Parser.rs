@@ -56,7 +56,6 @@ pub mod PARSER {
 
         fn check(&mut self,e: &LTOK) -> bool{std::mem::discriminant(self.peek()) == std::mem::discriminant(e)}
 
-
         fn match_token(&mut self,token:&[LTOK]) -> bool{
             for i in token{
                 if self.check(i){
@@ -66,7 +65,6 @@ pub mod PARSER {
             }
             false
         }
-
 
         fn consume(&mut self,e: &LTOK) -> Parser_ret<LTOK>{
             if self.check(e) {
@@ -101,9 +99,14 @@ pub mod PARSER {
         self.consume(&LTOK::RPAREN)?;
 
         let rtype = 
-            if self.match_token(&[LTOK::ARROW]) {Some(self.eval_type().unwrap())}
-            else{None};
+            if self.match_token(&[LTOK::ARROW]) {
+                Some(self.eval_type().unwrap())
+            }
+            else{
+                None
+            };
 
+        self.consume(&LTOK::LBRACE)?;
         let body = self.eval_block()?;
         self.consume(&LTOK::RBRACE)?;
         return Ok(Declare::Function { name:name, rtype: rtype, args: param, body: body });
@@ -378,11 +381,12 @@ pub mod PARSER {
         match self.peek() {
             LTOK::EQ => {
                 self.next();
-                return Some(BIN_OP::Eq);},
-            LTOK::N_EQ => {self.next();
-                return Some(BIN_OP::N_eq);},
+                return Some(BIN_OP::Eq)},
+            LTOK::N_EQ => {
+                self.next();
+                return Some(BIN_OP::N_eq)},
             _ => {return None},
-        };
+        }
     }
 
     fn eval_comparator(&mut self) -> Parser_ret<Expr>{
@@ -446,18 +450,16 @@ pub mod PARSER {
     }
     }
 
-
-
     fn parse_term(&mut self) ->Parser_ret<Expr>{
         let mut left = self.parse_factor()?;
-        while let Some(op) = self.match_term_op(){
+        while let Some(op) = self.match_signedness(){
             let right = self.parse_factor()?;
             left = Expr::Binary_op { op, left: Box::new(left), right: Box::new(right) };
         }
         Ok(left)
     }
 
-    fn match_term_op(&mut self) -> Option<BIN_OP>{
+    fn match_signedness(&mut self) -> Option<BIN_OP>{
         match self.peek()  {
             LTOK::PLUS => {self.next();Some(BIN_OP::Add)},
             LTOK::MINUS => {self.next();Some(BIN_OP::Sub)},
@@ -483,7 +485,6 @@ pub mod PARSER {
         }
     }
 
-
     fn eval_unary(&mut self) -> Parser_ret<Expr>{
         match self.peek(){
         LTOK::MINUS => {
@@ -500,7 +501,7 @@ pub mod PARSER {
             let operand= self.eval_unary()?;
             Ok(Expr::Unary_op { op:UN_OP::Tilda, operand: Box::new(operand) })
         },
-        t => {println!("{:?}",t);self.eval_fxn_call()},
+        t => {self.eval_fxn_call()},
         }    
     }
 
@@ -517,11 +518,9 @@ pub mod PARSER {
                     }else{
                         return Err(ParserError::Invalid_Code);
                     }
-
                 }
                 _ => break,
             }
-
         }
         Ok(expr)
     }
@@ -538,22 +537,22 @@ pub mod PARSER {
         };
         Ok(ret)
     }
+
     fn eval_primary(&mut self) -> Parser_ret<Expr> {
         match self.next() {
             LTOK::INT(x) => Ok(Expr::Int(x)),
             LTOK::FLOAT(x) => Ok(Expr::Float(x)),
             LTOK::STRING(x) => Ok(Expr::String(x)),
+            LTOK::IDENT(x) => Ok(Expr::Ident(x)),
             LTOK::LPAREN => {
                 let expr = self.eval_expr()?;
                 self.consume(&LTOK::RPAREN)?;
                 Ok(expr)
             }
-            // 
             _ => Err(ParserError::Custom("TYPE was required".to_string())),
 
         }
     }
-
    
     /* ******************************** EXPRESSIONS ********************************  */
 
