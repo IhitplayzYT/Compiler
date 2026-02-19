@@ -28,6 +28,7 @@ pub mod Lex_Tok {
         STRING(String), // -> Can be any string
         INT(i64),       // -> To identify whole numbers
         FLOAT(f64),     // -> To identify floats(Done so that the enum can have trait Hash and Eq to be used by the parser in precedmap)
+        BOOL(bool),     // -> To identify booleans
         PLUS,           // -> (+)
         MINUS,          // -> (-)
         DIV,            // -> (/)
@@ -67,6 +68,8 @@ pub mod Lex_Tok {
         COLON,          // -> (:)
         COMMA,          // -> (,)
         NULL,           // -> (None/Null)   
+        TRUE,           // -> Boolean True
+        FALSE,          // -> Boolean False
         EOF,            // -> ('')        
         QUOTE,          // -> (')
         DQUOTE,         // -> (")
@@ -74,5 +77,6 @@ pub mod Lex_Tok {
         INT_TYPE,       // -> i64_type
         FLOAT_TYPE,     // -> f64_type
         STRING_TYPE,    // -> string_type
+        BOOL_TYPE       // -> Boolean type
     }
 }

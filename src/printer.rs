@@ -36,6 +36,7 @@ LTOK::IDENT(x) => {x.clone()},
 LTOK::STRING(x)  => {"\"".to_string() + x + "\""},
 LTOK::INT(y) => format!("{:?}",y),
 LTOK::FLOAT(z) => format!("{:?}",z),
+LTOK::BOOL(k) => format!("{:?}",if *k {"True"} else {"False"}),
 LTOK::PLUS => {" + ".to_string()},          
 LTOK::MINUS => {" - ".to_string()},         
 LTOK::DIV => {" / ".to_string()},           
@@ -269,6 +270,9 @@ fn print_expression(expr: &Expr, indent: usize, extra_prefix: &str) {
         
         Expr::String(s) => {
             println!("{}└──  String: \"{}\"", prefix, s);
+        }
+        Expr::Bool(b) => {
+            println!("{}└──  String: \"{}\"",prefix,b);
         }
         
         Expr::Ident(name) => {

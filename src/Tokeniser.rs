@@ -6,7 +6,7 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
+#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code)]
 pub mod Tokeniser {
     use crate::Lexer_Tok::Lex_Tok::LTOK;
     use once_cell::sync::Lazy;
@@ -26,6 +26,7 @@ pub mod Tokeniser {
             ("break", LTOK::BREAK),
             ("continue", LTOK::CONTINUE),
             ("return", LTOK::RETURN),
+            ("bool",LTOK::BOOL_TYPE),
             ("s8", LTOK::INT_TYPE),
             ("s16", LTOK::INT_TYPE),
             ("s32", LTOK::INT_TYPE),
@@ -48,7 +49,7 @@ pub mod Tokeniser {
             ("in",LTOK::IN)
         ])
     });
-
+    #[derive(Debug,Clone)]
     pub struct Lexer {
         pub text: String,
         pub Lexer_Output: Vec<LTOK>,
@@ -146,6 +147,75 @@ pub mod Tokeniser {
             let mut temp = String::new();
             let mut c = 0;
             while let Some(i) = iter.next() {
+                if i == 'T' && c == 0{
+                    let mut bool_buff = "T".to_string();
+                    match iter.next() {
+                        Some('r') => {
+                            bool_buff += "r";
+                            match iter.next() {
+                                Some('u') => {
+                                    bool_buff += "u";
+                                    match iter.next() {
+                                        Some('e') => {
+                                            ret.push(LTOK::TRUE);
+                                        }
+                                        _ => {
+                                            temp.push_str(&bool_buff[..]);
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    temp.push_str(&bool_buff[..]);
+                                }
+
+                            }
+
+                        },
+                        _ => {
+                            temp.push_str(&bool_buff[..]);
+                        }
+                    }
+                }
+
+                if i == 'F' && c == 0{
+                    let mut bool_buff = "T".to_string();
+                    match iter.next() {
+                        Some('a') => {
+                            bool_buff += "r";
+                            match iter.next() {
+                                Some('l') => {
+                                    bool_buff += "u";
+                                    match iter.next() {
+                                        Some('s') => {
+                                            bool_buff += "s";
+                                            match iter.next() {
+                                                Some('e') => {
+                                                    ret.push(LTOK::FALSE);
+                                                },
+                                                _ => {
+                                                    temp.push_str(&bool_buff[..]);
+                                                }
+
+                                            }
+                                        }
+                                        _ => {
+                                            temp.push_str(&bool_buff[..]);
+                                        }
+                                    }
+                                },
+                                _ => {
+                                    temp.push_str(&bool_buff[..]);
+                                }
+
+                            }
+
+                        },
+                        _ => {
+                            temp.push_str(&bool_buff[..]);
+                        }
+                    }
+                } 
+
                 if c >= 1 {
                     if i == '\'' && c == 1 {
                         c = 0;

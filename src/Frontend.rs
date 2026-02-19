@@ -12,6 +12,7 @@ pub mod Frontend {
     use crate::Parser::PARSER::{Parser};
     use crate::Semantic_Analysis::Analyser::Semantilizer;
     use crate::Tokeniser::Tokeniser::Lexer;
+    #[derive(Debug,Clone)]
     pub struct Frontend {
         pub lexer: Lexer,
         pub parser: Option<Parser>,
