@@ -27,6 +27,7 @@ pub mod Lex_Tok {
     pub enum LTOK {
         LET,            // -> let (Varib Declaring)
         MUT,            // -> mut (mutability declaring)
+        MUT_ref,        // -> &mut (mutability reference)
         CONST,          // -> const (For constants)
         IF,             // -> (If conditional for Statement && Expr)
         ELSE,           // -> (Else conditional for Statement && Expr)
@@ -67,8 +68,8 @@ pub mod Lex_Tok {
         S_CARET,        // -> (+=)
         S_LSHIFT,       // -> (<<=)
         S_RSHIFT,       // -> (>>=)
-        INCR,           // -> (++)   /*  NOTE: TODO:FIXME:
-        DECR,           // -> (--)      Both of the operators simply evaluate to postfix and usage if PREFIX */
+        INCR,           // -> (++)   /*  NOTE: 
+        DECR,           // -> (--)      Both of the operators simply evaluate to postfix */
         RSHIFT,         // -> (>>)
         LSHIFT,         // -> (<<)
         AMP,            // -> (&)
@@ -85,6 +86,7 @@ pub mod Lex_Tok {
         LPAREN,         // -> (
         RPAREN,         // -> )
         SEMICOLON,      // -> (;)
+        DOT,            // -> (.)
         COLON,          // -> (:)
         COMMA,          // -> (,)
         NULL,           // -> (None/Null)   
@@ -97,6 +99,8 @@ pub mod Lex_Tok {
         INT_TYPE,       // -> i64_type
         FLOAT_TYPE,     // -> f64_type
         STRING_TYPE,    // -> string_type
-        BOOL_TYPE       // -> Boolean type
+        BOOL_TYPE,      // -> Boolean type
+        STRUCT,         // -> Structure 
+        ENUM,           // -> enumerations
     }
 }

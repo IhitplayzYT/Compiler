@@ -114,10 +114,10 @@ fn print_decl(decl: &Declare, indent: usize) {
             println!("{}{} Function: '{}'", prefix, branch, name);
             if !args.is_empty() {
                 println!("{}│   ├── Parameters:", prefix);
-                for (i, (pname, ptype)) in args.iter().enumerate() {
+                for (i, (pname, ptype,mutable)) in args.iter().enumerate() {
                     let last = i == args.len() - 1;
                     let connector = if last { "└──" } else { "├──" };
-                    println!("{}│   │   {} {} : {:?}", prefix, connector, pname, ptype);
+                    println!("{}│   │   {} {} : {:?} {}", prefix, connector, pname, ptype,if *mutable {"MUTABLE"} else {"IMMUTABLE"});
                 }
             } else {
                 println!("{}│   ├── Parameters: (none)", prefix);
@@ -134,7 +134,35 @@ fn print_decl(decl: &Declare, indent: usize) {
                 let last = i == body.len() - 1;
                 print_statement(stmt, indent + 2, last);
             }
-        }
+        },
+        Declare::Struct { name, fields } => {
+            println!("{}{} Struct: '{}'", prefix, branch, name);
+            if !fields.is_empty() {
+                println!("{}│   ├── Fields:", prefix);
+                for (i, (pname, ptype)) in fields.iter().enumerate() {
+                    let last = i == fields.len() - 1;
+                    let connector = if last { "└──" } else { "├──" };
+                    println!("{}│   │   {} {} : {:?}", prefix, connector, pname, ptype);
+                }
+            } else {
+                println!("{}│   ├── Fields: (none)", prefix);
+            }
+            
+        }, 
+        Declare::Enum { name, variations } => {
+            println!("{}{} Enum: '{}'", prefix, branch, name);
+            if !variations.is_empty() {
+                println!("{}│   ├── Parameters:", prefix);
+                for (i,v) in variations.iter().enumerate() {
+                    let last = i == variations.len() - 1;
+                    let connector = if last { "└──" } else { "├──" };
+                    println!("{}│   │   {} {:?}", prefix, connector,v);
+                }
+            } else {
+                println!("{}│   ├── Fields: (none)", prefix);
+            }
+            
+        },
         
     }
 }
@@ -298,7 +326,23 @@ fn print_expression(expr: &Expr, indent: usize, extra_prefix: &str) {
         Expr::Unary_op { op, operand } => {
             println!("{}└── UnaryOp: {:?}", prefix, op);
             print_expression(operand, indent + 1, "    ");
-        }
+        },
+        Expr::Postdecr(x) => {
+            println!("{}└── Postdecr: {:?}", prefix, "--");
+            print_expression(&Expr::Postdecr(x.clone()), indent + 1, "    ");
+        },
+        Expr::Predecr(x) => {
+            println!("{}└── Predecr: {:?}", prefix, "--");
+            print_expression(&Expr::Predecr(x.clone()), indent + 1, "    ");
+        },
+        Expr::Postincr(x) => {
+            println!("{}└── Postincr: {:?}", prefix, "++");
+            print_expression(&Expr::Postincr(x.clone()), indent + 1, "    ");
+        },
+        Expr::Preincr(x) => {
+            println!("{}└── Preincr: {:?}", prefix, "--");
+            print_expression(&Expr::Preincr(x.clone()), indent + 1, "    ");
+        },
         
         Expr::Fxn_call { name, args } => {
             println!("{}└── FunctionCall: '{}'", prefix, name);

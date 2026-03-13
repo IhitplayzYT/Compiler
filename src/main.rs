@@ -20,9 +20,11 @@ mod Semantic_Analysis;
 mod Ident_table;
 mod Tokeniser;
 mod Errors;
-mod Compiler;
+mod Interpretor;
 mod printer;
 use std::env;
+
+use crate::Semantic_Analysis::Analyser::Semantilizer;
 
 
 fn main() {
@@ -37,7 +39,10 @@ fn main() {
     println!();
     println!();
     let mut PARSER = Parser::PARSER::Parser::new(LEXER.Lexer_Output);
-    let t = PARSER.Parse();
+    let t = PARSER.Parse().unwrap();
     println!("{:?}",t);
+    let mut sem = Semantilizer::new();
+    let z =  sem.analyse(&t);
+    println!("{:?} !!",z);
     /* ADD THE FRONTEND CODE TO REPLACE THIS  */
 }

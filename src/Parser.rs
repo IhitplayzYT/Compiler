@@ -12,7 +12,8 @@
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code)]
 pub mod PARSER {
 
-    use crate::{Ast::{AST::{Code,Type,Declare,Statmnt,Expr,BIN_OP,UN_OP}},Lexer_Tok::Lex_Tok::LTOK};
+
+    use crate::{Ast::AST::{BIN_OP, Code, Declare, EnumVars, Expr, Statmnt, Type, UN_OP}, Lexer_Tok::Lex_Tok::LTOK};
     use crate::Errors::Err::{ParserError,Parser_ret};
 
     ///  Parser Struct 
@@ -76,6 +77,7 @@ pub mod PARSER {
             self.ast = Some(Code{Program:ret.clone()});
             Ok(Code { Program: ret})
         }
+
         /* ******************************** MAIN ********************************  */
 
 
@@ -100,6 +102,49 @@ pub mod PARSER {
             self.idx += 1;
             tok
         }
+
+        ///  Parser Helper function
+        /// 
+        /// Returns the previous token
+        ///
+        /// # Returns
+        /// LTOK -> Returns the previous token without progressing onwards 
+        /// 
+        /// # Example 
+        /// ```
+        /// parser.prev();
+        /// ```       
+
+        pub fn prev(&mut self) -> LTOK {
+            if self.idx > 0 {
+            self.input[self.idx - 1].clone()
+            } else{
+                LTOK::EOF
+            }
+
+        }
+
+        ///  Parser Helper function
+        /// 
+        /// Returns the ith before token
+        ///
+        /// # Returns
+        /// LTOK -> Returns the prev ith token without progressing onwards 
+        /// 
+        /// # Example 
+        /// ```
+        /// parser.prev_n(3);
+        /// ```   
+        
+
+        pub fn prev_n(&mut self,i: usize) -> LTOK {
+             if self.idx - i > 0 {
+            self.input[self.idx - i].clone()
+            } else{
+                LTOK::EOF
+            }
+        }
+
 
         ///  Parser Helper function
         /// Returns the next token in the token stream without progressing forward
@@ -190,25 +235,67 @@ pub mod PARSER {
         /* ******************************** FUNCTIONS ********************************  */
 
         /// Parser Helper function
-        /// Parses any function declarations ato build a syn=mbol table to be used latter for by semantic analyser
+        /// Parses any function declarations
         ///  
         /// # Returns
-        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration enum;
+        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration;
         /// 
      
         fn eval_declare(&mut self) -> Parser_ret<Declare>{
             match self.peek(){
             LTOK::FN => self.eval_fxn(),
-                _ => {return Err(ParserError::Custom("Expected Declaration".to_string()));}
+            LTOK::STRUCT => self.eval_struct(), 
+            LTOK::ENUM => self.eval_enum(), 
+            _ => {return Err(ParserError::Custom("Expected Declaration".to_string()));}
             }
-
         }         
 
         /// Parser Helper function
-        /// Evaluates a function definition and retuns the declaration
+        /// Evaluates an enum definition and returns the declaration
         ///  
         /// # Returns
-        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration enum;
+        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration enum
+        /// 
+
+        fn eval_enum(&mut self) -> Parser_ret<Declare> {
+            self.consume(&LTOK::ENUM)?;
+            let name = match self.next() {
+            LTOK::IDENT(n) => n,
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Enum name".to_string(),got:format!("{:?}",tok)});},
+            };
+            
+            self.consume(&LTOK::LBRACE)?;
+            let fields = self.eval_enum_fields()?;
+            self.consume(&LTOK::RBRACE)?;
+            Ok(Declare::Enum { name, variations: fields })
+        }
+
+        /// Parser Helper function
+        /// Evaluates a struct definition and retunrs the declaration
+        ///  
+        /// # Returns
+        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration struct
+        /// 
+
+        fn eval_struct(&mut self) -> Parser_ret<Declare> {
+            self.consume(&LTOK::STRUCT)?;
+            let name = match self.next() {
+            LTOK::IDENT(n) => n,
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Struct name".to_string(),got:format!("{:?}",tok)});},
+            };
+            
+            self.consume(&LTOK::LBRACE)?;
+            let fields = self.eval_struct_fields()?;
+            self.consume(&LTOK::RBRACE)?;
+            Ok(Declare::Struct { name, fields })
+
+        }
+
+        /// Parser Helper function
+        /// Evaluates a function definition and returns the declaration
+        ///  
+        /// # Returns
+        /// Parser_ret<Declare> -> Returns a Parser result object containing Declaration function
         /// 
 
         fn eval_fxn(&mut self) -> Parser_ret<Declare>{
@@ -219,14 +306,11 @@ pub mod PARSER {
             tok => {return Err(ParserError::UnexpectedToken{expected:"Function name".to_string(),got:format!("{:?}",tok)});}};
 
         self.consume(&LTOK::LPAREN)?;
-
         let param = self.eval_params()?;
-
         self.consume(&LTOK::RPAREN)?;
 
-        let rtype = 
-            if self.match_token(&[LTOK::ARROW]) {
-                Some(self.eval_type().unwrap())
+        let rtype = if self.match_token(&[LTOK::ARROW]) {
+                Some(self.eval_types().unwrap())
             }
             else{
                 None
@@ -238,6 +322,78 @@ pub mod PARSER {
         return Ok(Declare::Function { name:name, rtype: rtype, args: param, body: body });
         }
 
+        fn eval_enum_fields(&mut self) -> Parser_ret<Vec<EnumVars>>{
+            let mut ret = Vec::new();
+            while !self.check(&LTOK::RBRACE) {
+            let name = match self.next(){
+            LTOK::IDENT(x) => x,
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Field name".to_string(),got:format!("{:?}",tok)});},
+            };
+            let variant = if self.match_token(&[LTOK::LPAREN]){
+                let types = self.eval_tuple_types()?;
+                self.consume(&LTOK::RPAREN)?;
+                EnumVars::Tuple(name, types)
+            } else if self.match_token(&[LTOK::LBRACE]){
+                let fields = self.eval_struct_fields()?;
+                self.consume(&LTOK::RBRACE)?;
+                EnumVars::Struct(name,fields)
+            }else{
+                EnumVars::Single(name)
+            };
+                ret.push(variant);
+                if !self.match_token(&[LTOK::COMMA]) {
+                    break;
+                }
+            }
+
+            Ok(ret)
+        }
+
+        /// Parser Helper function
+        /// Evaluates a enum and struct field declaration
+        ///  
+        /// # Returns
+        /// Parser_ret<Vec<(String,Type)>> -> Returns a Parser result object containing a vector of (name,dtype) tuples
+        /// 
+
+        fn eval_struct_fields(&mut self) -> Parser_ret<Vec<(String,Type)>>{
+            let mut fields = Vec::new();
+            while !self.check(&LTOK::RBRACE) {
+            let name = match self.next(){
+            LTOK::IDENT(x) => x,
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Field name".to_string(),got:format!("{:?}",tok)});},
+            };
+            self.consume(&LTOK::COLON)?;
+            let type_ = self.eval_types()?;
+            fields.push((name,type_));              
+            if !self.match_token(&[LTOK::COMMA]){
+                break;
+            }
+            }   
+
+            Ok(fields)
+        }
+
+        /// Parser Helper function
+        /// Evaluates the type of next token
+        ///  
+        /// # Returns
+        /// Parser_ret<> -> Returns a Parser result object containing the type of the next token in token stream
+        /// 
+
+        fn eval_types(&mut self)->Parser_ret<Type>{
+            match self.next(){
+            LTOK::STRING_TYPE => Ok(Type::STRING),
+            LTOK::INT_TYPE => Ok(Type::INT),
+            LTOK::FLOAT_TYPE => Ok(Type::FLOAT),
+            LTOK::BOOL_TYPE => Ok(Type::BOOL),
+            LTOK::IDENT(name) => Ok(Type::CUSTOM(name)),
+            tok => {return Err(ParserError::UnexpectedToken{expected:"type".to_string(),got:format!("{:?}",tok)});},
+            }
+
+        }
+
+
         /// Parser Helper function
         /// Evaluates the paramaters and their argument types for a function 
         ///  
@@ -245,17 +401,26 @@ pub mod PARSER {
         /// Parser_ret<Vec<(String,Type)>> -> Returns a Parser result object containing a vector of String,Type tuples to be used in the semantic anlayser to analyse the declaration type
         /// 
 
-        fn eval_params(&mut self) -> Parser_ret<Vec<(String,Type)>>{
-        let mut ret:Vec<(String,Type)> = Vec::new();
+        fn eval_params(&mut self) -> Parser_ret<Vec<(String,Type,bool)>>{
+        let mut ret:Vec<(String,Type,bool)> = Vec::new();
         if !self.check(&LTOK::RPAREN) {
             loop{
+                let mut mutable = false;
+                if let LTOK::MUT = self.peek() {
+                    mutable = true;
+                    self.next();
+                }
+                if let LTOK::MUT_ref = self.peek() {
+                    mutable = true;
+                    self.next();
+                }
                 let name = match self.next() {
                     LTOK::IDENT(x) => x,
                     t => {return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got: format!("{:?}", t) })}
                 };
                 self.consume(&LTOK::COLON)?;
-                let type_varib = self.eval_type()?;
-                ret.push((name,type_varib));
+                let type_varib = self.eval_types()?;
+                ret.push((name,type_varib,mutable));
                 if !self.match_token(&[LTOK::COMMA]){break;}
             }
         }
@@ -282,14 +447,30 @@ pub mod PARSER {
             t => return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got:  format!("{:?}",t)})
         };
         let annot = if self.match_token(&[LTOK::COLON]) {
-            Some(self.eval_type()?)
+            Some(self.eval_types()?)
         }
         else{
             None
         };
 
         self.consume(&LTOK::ASSGN)?;
-        let val = self.eval_expr()?;
+        // Check for struct initialization: TypeName { ... }
+        let val = if let LTOK::IDENT(type_name) = self.peek().clone() {
+        let saved_idx = self.idx;
+        self.next(); // Consume IDENT
+        if self.check(&LTOK::LBRACE) {
+            self.next(); // Consume LBRACE
+            let fields = self.parse_struct_fields()?;
+            self.consume(&LTOK::RBRACE)?;
+            Expr::Struct_enum_init { name: type_name, fields }
+        } else {
+            // Not struct init, restore and parse normally
+            self.idx = saved_idx;
+            self.eval_expr()?
+        }
+    } else {
+        self.eval_expr()?
+    };
         self.consume(&LTOK::SEMICOLON)?;
         Ok(Statmnt::Let { name, mutable, type_annot:annot, value: val })
         }
@@ -308,7 +489,7 @@ pub mod PARSER {
             t => return Err(ParserError::UnexpectedToken { expected: "Identifier".to_string(), got:  format!("{:?}",t)})
             };
             let annot = if self.match_token(&[LTOK::COLON]) {
-                Some(self.eval_type()?)
+                Some(self.eval_types()?)
             }
             else{
                 None
@@ -316,7 +497,7 @@ pub mod PARSER {
             self.consume(&LTOK::ASSGN)?;
             let val = self.eval_expr()?;
             self.consume(&LTOK::SEMICOLON)?;
-            Ok(Statmnt::Let { name, mutable:true, type_annot:annot, value: val })
+            Ok(Statmnt::Let { name, mutable:false, type_annot:annot, value: val })
         }
    
         /* ******************************** LET & CONST ********************************  */
@@ -332,8 +513,12 @@ pub mod PARSER {
 
         fn eval_if_else(&mut self) -> Parser_ret<Statmnt>{
             self.consume(&LTOK::IF)?;
-           
+            let has_paren = self.match_token(&[LTOK::LPAREN]);
             let cond = self.eval_expr()?;
+            if has_paren{
+                self.consume(&LTOK::RPAREN)?;
+            }
+
             self.consume(&LTOK::LBRACE)?;
             let then_branch = self.eval_block()?;
             self.consume(&LTOK::RBRACE)?;
@@ -343,7 +528,7 @@ pub mod PARSER {
                 if self.check(&LTOK::IF){
                     Some(vec![self.eval_if_else()?])
                 }else{
-                    self.consume(&LTOK::LBRACE)?;
+                   self.consume(&LTOK::LBRACE)?;
                    let bl = self.eval_block()?;
                    self.consume(&LTOK::RBRACE)?;
                    Some(bl)
@@ -393,7 +578,11 @@ pub mod PARSER {
 
         fn eval_while(&mut self) -> Parser_ret<Statmnt> {
             self.consume(&LTOK::WHILE)?;
+            let has_paren = self.match_token(&[LTOK::LPAREN]);
             let cond = self.eval_expr()?;
+            if has_paren {
+                self.consume(&LTOK::RPAREN)?;
+            }
             self.consume(&LTOK::LBRACE)?;
             let body = self.eval_block()?;
             self.consume(&LTOK::RBRACE)?;
@@ -429,16 +618,7 @@ pub mod PARSER {
         /// Parser_ret<Type> -> Returns the parser result which hold the Type for LTOK::XXX_TYPE on success
         /// 
 
-        fn eval_type(&mut self) -> Parser_ret<Type>{
-            match self.next(){
-                LTOK::INT_TYPE => Ok(Type::INT),
-                LTOK::FLOAT_TYPE => Ok(Type::FLOAT),
-                LTOK::STRING_TYPE => Ok(Type::STRING),
-                LTOK::BOOL_TYPE => Ok(Type::BOOL),
-                z => Err(ParserError::UnexpectedToken { expected: "INT|FLOAT|STRING|BOOL".to_string(), got:  format!("{:?}",z)})
-            }
-        }
-
+       
         /// Parser Helper function
         /// Evaluates the return token in the token stream
         ///  
@@ -448,26 +628,26 @@ pub mod PARSER {
     
         fn eval_return(&mut self) -> Parser_ret<Statmnt> {
             self.consume(&LTOK::RETURN)?;
-            let val = match self.next() {
-                LTOK::SEMICOLON => None,
-                _ => Some(self.eval_expr()?),
+            let val = if self.check(&LTOK::SEMICOLON) {
+                None
+            }else {
+                Some(self.eval_expr()?)
             };
-
+            self.consume(&LTOK::SEMICOLON)?;
             Ok(Statmnt::Return(val))
         }
 
         /// Parser Helper function
-        /// Evaluates the return token in the token stream
+        /// Evaluates the type list
         ///  
         /// # Returns
-        /// Parser_ret<Statmnt> -> Returns the parser result hold the Statmnt::return on success
+        /// Parser_ret<Vec<Type>> -> Returns the parser result hold the Vec<Type> list
         /// 
         
-        #[deprecated]
         fn eval_tuple_types(&mut self) -> Parser_ret<Vec<Type>>{
             let mut ret = Vec::new();
             while !self.check(&LTOK::RPAREN){
-                ret.push(self.eval_type()?);
+                ret.push(self.eval_types()?);
                 if !self.match_token(&[LTOK::COMMA]){
                     break;
                 }
@@ -496,19 +676,16 @@ pub mod PARSER {
             LTOK::WHILE => {self.eval_while()},
             LTOK::FOR => {self.eval_for()},
             LTOK::LOOP => {self.eval_loop()},
-            
             LTOK::BREAK => {
             self.next();
             self.consume(&LTOK::SEMICOLON)?;
             Ok(Statmnt::Break)
             },
-
             LTOK::CONTINUE =>{
             self.next();
             self.consume(&LTOK::SEMICOLON)?;
             Ok(Statmnt::Continue)
             },
-
             LTOK::RETURN => self.eval_return(),
             LTOK::LBRACE => {
                 self.next();
@@ -540,8 +717,6 @@ pub mod PARSER {
 
     /* ******************************** EXPRESSIONS ********************************  */
 
-    // TODO:FIXME: I have a bit of doubt as to correctness of the nested Option ??
-    // Also see for incr and decr
 
     /// Parser Helper function
     /// # Priority 0: =, +=, -=, /=, *=, &=, %=, |=, ^=, **
@@ -615,11 +790,7 @@ pub mod PARSER {
            self.next();
            Some(Some(BIN_OP::Xor))
        },
-        LTOK::POW => {
-           self.next();
-           Some(Some(BIN_OP::Pow))
-       },
-       _ => None,
+      _ => None,
    }
    }
 
@@ -875,7 +1046,8 @@ pub mod PARSER {
     }
 
     /// Parser Helper function
-    /// # Priority 9: *, /, %
+    /// # Priority 9: *, /, %, **
+    ///
     /// Evaluates the priority of factor type operators and incr/decr
     ///  
     /// # Returns
@@ -892,7 +1064,8 @@ pub mod PARSER {
     }
 
     /// Parser Helper function
-    /// Match function to determine which factor op * or / or %
+    /// Match function to determine which factor op * or / or % or **
+    /// 
     /// 
     /// # Important 
     /// This function is allows for equal precedeance of all operators 
@@ -906,12 +1079,13 @@ pub mod PARSER {
         LTOK::STAR => {self.next();Some(BIN_OP::Mul)},
         LTOK::DIV => {self.next();Some(BIN_OP::Div)},
         LTOK::MODULO => {self.next();Some(BIN_OP::Mod)},
+        LTOK::POW => {self.next();Some(BIN_OP::Pow)},
         _ => None,
         }
     }
     
     /// Parser Helper function
-    /// # Priority 10: !, ~, negate, --, ++
+    /// # Priority 10: !, ~, negate, --(pre), ++(pre), function_calls
     /// Evaluates the priority of unary operators
     ///  
     /// # Returns
@@ -937,20 +1111,24 @@ pub mod PARSER {
         },
         LTOK::INCR => {
             self.next();
-            let operand= self.eval_unary()?;
-            Ok(Expr::Unary_op { op:UN_OP::Incr, operand: Box::new(operand) })           
+            match self.next(){
+                LTOK::IDENT(x) => Ok(Expr::Preincr(x)),
+                t => Err(ParserError::UnexpectedToken { expected: "identifier".to_string(), got: format!("{:?}",t)}),
+            }
         },
         LTOK::DECR => {
             self.next();
-            let operand= self.eval_unary()?;
-            Ok(Expr::Unary_op { op:UN_OP::Decr, operand: Box::new(operand) })           
-        }
+            match self.next(){
+                LTOK::IDENT(x) => Ok(Expr::Predecr(x)),
+                t => Err(ParserError::UnexpectedToken { expected: "identifier".to_string(), got: format!("{:?}",t)}),
+            }
+        },
         _ => {self.eval_fxn_call()},
         }    
     }
 
     /// Parser Helper function
-    /// # Priority 10: fxn_calls()
+    /// # Priority 10: fxn_calls(), ++(post), --(post)
     /// Evaluates the priority of function calls[NOTE: Same priority as the unary operators]
     ///  
     /// # Returns
@@ -965,12 +1143,37 @@ pub mod PARSER {
                     self.next();
                     let args = self.eval_args()?;
                     self.consume(&LTOK::RPAREN)?;
+
                     if let Expr::Ident(x) = expr{
                         expr = Expr::Fxn_call { name:x, args:args };
                     }else{
                         return Err(ParserError::Invalid_Code);
                     }
-                }
+                },
+                LTOK::DOT => {
+                    self.next();
+                    let field = match self.next() {
+                        LTOK::IDENT(x) => x,
+                        t => return Err(ParserError::UnexpectedToken { expected: "Field name".to_string(), got: format!("{:?}",t)})
+                    };
+                    expr = Expr::Field_access { obj: Box::new(expr), field };
+                },
+                LTOK::INCR => {
+                    if let Expr::Ident(x) = expr{
+                        self.next();
+                        expr = Expr::Postincr(x);
+                    } else{
+                        return Err(ParserError::Custom("Incr only identifiers".to_string()));
+                    }
+                },
+                LTOK::DECR => {
+                    if let Expr::Ident(x) = expr{
+                        self.next();
+                        expr = Expr::Postdecr(x);
+                    } else{
+                        return Err(ParserError::Custom("Decr only identifiers".to_string()));
+                    }
+                },
                 _ => break,
             }
         }
@@ -993,7 +1196,7 @@ pub mod PARSER {
                     break;
                 }
             }
-        };
+        }
         Ok(ret)
     }
 
@@ -1005,22 +1208,51 @@ pub mod PARSER {
     /// Parser_ret<Vec<Expr>> -> If no error occurs returns a vector of expressions symbolising the AST of each of the arghuments provided to the function
     ///  
 
+
+    // TODO:
+    // FIXME: Finish this function
     fn eval_primary(&mut self) -> Parser_ret<Expr> {
-        match self.next() {
+    let token = self.next();
+        match token {
             LTOK::INT(x) => Ok(Expr::Int(x)),
             LTOK::FLOAT(x) => Ok(Expr::Float(x)),
             LTOK::STRING(x) => Ok(Expr::String(x)),
             LTOK::BOOL(x) => Ok(Expr::Bool(x)),
-            LTOK::IDENT(x) => Ok(Expr::Ident(x)),
+            LTOK::TRUE => Ok(Expr::Bool(true)),
+            LTOK::FALSE => Ok(Expr::Bool(false)),
+            LTOK::IDENT(x) => {
+                Ok(Expr::Ident(x))
+            },
             LTOK::LPAREN => {
                 let expr = self.eval_expr()?;
                 self.consume(&LTOK::RPAREN)?;
                 Ok(expr)
             }
-            _ => Err(ParserError::Custom("TYPE was required".to_string())),
-
+            t => Err(ParserError::UnexpectedToken{expected: "Expression".to_string(),got:format!("{:?}",t)}),
         }
     }
+
+
+    fn parse_struct_fields(&mut self) -> Parser_ret<Vec<(String,Expr)>> {
+        let mut fields = Vec::new();
+        if !self.check(&LTOK::RBRACE) {
+            loop {
+            let name = match self.next() {
+            LTOK::IDENT(n) => n,
+            tok => {return Err(ParserError::UnexpectedToken{expected:"Enum name".to_string(),got:format!("{:?}",tok)});},
+            };
+        self.consume(&LTOK::COLON)?;
+        let value = self.eval_expr()?;
+        fields.push((name,value));
+        if !self.match_token(&[LTOK::COMMA]) {
+            break ;
+        }
+        }
+        }
+        
+        Ok(fields)
+    }
+
    
     /* ******************************** EXPRESSIONS ********************************  */
 

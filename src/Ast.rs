@@ -5,7 +5,6 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
-
 //   Ast.rs    //
 // Contains the enums,structs used by the Parser to build the AST
 
@@ -57,6 +56,7 @@ pub mod AST {
         STRING,
         BOOL,
         NULL,
+        CUSTOM(String),
     } 
 
 /// Enum to hold Binary Operators
@@ -90,7 +90,7 @@ pub mod AST {
 /// ``` 
     #[derive(Clone,PartialEq,Debug)]
     pub enum UN_OP{
-        Tilda,Bang,Neg,Incr,Decr
+        Tilda,Bang,Neg,
     }
 
 /// Enum to hold evaluatable expressions used by Parser
@@ -136,7 +136,40 @@ pub mod AST {
             name: String,
             args: Vec<Expr>,
         },
-        INCR_DECR_1(i64),
+        Struct_enum_init {
+        name: String,
+        fields: Vec<(String,Expr)>,
+        },
+
+        Field_access {
+            obj : Box<Expr>,
+            field:String,
+        },
+        Postincr(String), // x++
+        Postdecr(String), // x--
+        Preincr(String),  // ++x
+        Predecr(String),  // --x
+    }
+    /// Enum special type field -to be used in enum decl
+    /// 
+    /// # Traits
+    /// - Derived<br/>
+    ///     - Clone
+    ///     - PartialEq
+    ///     - Debug
+    /// # Example
+    /// ```
+    /// Single(String),             // res::error;
+    /// Tuple(String,Vec<Type>),    // Res::ok(i32,f64);
+    /// ``` 
+    /// 
+
+    #[derive(Debug,Clone,PartialEq)]
+    pub enum EnumVars{
+        Single(String),                     // res::error;
+        Tuple(String,Vec<Type>),            // Res::ok(i32,f64);
+        Struct(String,Vec<(String,Type)>),  // Res::Ok { val : i32 };
+
     }
 
 
@@ -163,9 +196,17 @@ pub mod AST {
         Function { 
             name : String,
             rtype: Option<Type>,
-            args : Vec<(String,Type)>,
+            args : Vec<(String,Type,bool)>,
             body : Vec<Statmnt>,
         },
+        Struct {
+            name:String,
+            fields: Vec<(String,Type)>,
+        },
+        Enum {
+            name: String,
+            variations: Vec<EnumVars>
+        }
     }
 
 /// Enum to hold statements used by Parser
@@ -225,7 +266,7 @@ pub mod AST {
         Break,
         Continue,
         Return(Option<Expr>),
-        Block(Vec<Statmnt>)
+        Block(Vec<Statmnt>),
 
     }
 
