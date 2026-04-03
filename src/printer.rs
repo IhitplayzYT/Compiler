@@ -89,7 +89,19 @@ LTOK::ARROW => {" -> ".to_string()},
 LTOK::INT_TYPE => {"int ".to_string()},      
 LTOK::FLOAT_TYPE => {"float ".to_string()},    
 LTOK::STRING_TYPE => {"string ".to_string()},   
-_ => std::process::exit(-1),
+LTOK::BOOL_TYPE => {"bool ".to_string()},   
+LTOK::MUT_ref => {"&mut ".to_string()},
+LTOK::RANGE => {"..".to_string()},
+LTOK::STRUCT=> {"struct ".to_string()},
+LTOK::ENUM => {"enum ".to_string()},
+LTOK::S_RSHIFT => {" >>= ".to_string()},
+LTOK::S_LSHIFT => {" <<= ".to_string()},
+LTOK::POW => {" ** ".to_string()},
+LTOK::INCR => {" ++ ".to_string()},
+LTOK::DECR => {" -- ".to_string()},
+LTOK::DOT => {".".to_string()},
+LTOK::TRUE => {"True".to_string()},
+LTOK::FALSE => {"False".to_string()},
 }
 );
 }
@@ -185,11 +197,11 @@ fn print_statement(stmt: &Statmnt, indent: usize, is_last: bool) {
             print_expression(value, indent, expr_prefix);
         }
         
-        Statmnt::Assignment { name, op, val } => {
+        Statmnt::Assignment { target, op, val } => {
             if let Some(shorthand) = op {
-                println!("{}{}️  Assignment: '{}' {:?}=", prefix, connector, name, shorthand);
+                println!("{}{}️  Assignment: '{:?}' {:?}=", prefix, connector, target, shorthand);
             } else {
-                println!("{}{}️  Assignment: '{}' =", prefix, connector, name);
+                println!("{}{}️  Assignment: '{:?}' =", prefix, connector, target);
             }
             
             let expr_prefix = if is_last { "    " } else { "│   " };

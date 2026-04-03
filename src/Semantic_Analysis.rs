@@ -22,6 +22,8 @@ pub mod Analyser {
         Errors::Err::{self, Parser_ret, Semantic_Ret, Semantic_err},
     };
     use std::collections::HashMap;
+    use std::collections::HashSet;
+    use std::sync::LazyLock;
 
     /// Semanilizer structure[MAIN API]
     ///
@@ -49,6 +51,10 @@ pub mod Analyser {
         scope_stack: Vec<HashMap<String, (Type, bool)>>,
     }
 
+static STDIO_FXNS: LazyLock<HashSet<&str>> = LazyLock::new(|| {
+    HashSet::from(["print","println","log","Print","Log","Println","Scan","Scanf","Scanln","scan","scanf"])
+});
+
     impl Semantilizer {
         /// Semanilizer Constructor
         ///
@@ -69,6 +75,15 @@ pub mod Analyser {
             }
         }
 
+
+        fn gen_vec() -> Vec<(String,Type,bool)>{
+            let mut ret = Vec::new();
+            for i in 0..256{
+                ret.push((i.to_string(),Type::STRING,false));
+            }
+            ret
+        }
+
         /// Semanilizer main call
         ///
         /// # Return
@@ -79,6 +94,18 @@ pub mod Analyser {
         /// ```    
 
         pub fn analyse(&mut self, code: &Code) -> Semantic_Ret<()> {
+            let vec = Self::gen_vec();
+            self.save_declares(&Declare::Function { name: "println".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "log".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Log".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "print".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Println".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Print".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Scan".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "scan".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Scanln".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "scanf".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
+            self.save_declares(&Declare::Function { name: "Scanf".to_string(), rtype: None, args: vec.clone(), body: vec![] })?;  
             for decl in &code.Program {
                 self.save_declares(decl)?;
             }
@@ -227,6 +254,14 @@ pub mod Analyser {
             Ok(())
         }
 
+        pub fn root_ident(&self,expr:&Expr) -> Option<String>{
+            match expr{
+                Expr::Ident(name) => Some(name.to_string()),
+                Expr::Field_access { obj, .. } => {self.root_ident(obj)},
+                _ => None,       
+            }
+        }
+
         /// Semanilizer function to check validity of scope declarations
         ///
         /// # Return
@@ -241,7 +276,7 @@ pub mod Analyser {
                 Declare::Function {
                     rtype, args, body, ..
                 } => {
-                    self.scope_stack = vec![HashMap::new()];
+                    self.enter_scope();
                     self.current_function_return = rtype.clone();
 
                     for (p_name, var_type,mutable) in args {
@@ -251,6 +286,7 @@ pub mod Analyser {
                     for stmt in body {
                         self.analyze_stmt(stmt)?;
                     }
+                    self.exit_scope();
                     self.current_function_return = None;
                 }
                 _ => {}
@@ -279,6 +315,7 @@ pub mod Analyser {
                     let rhs_type = self.eval_type(value)?;
                     if let Some(t) = type_annot {
                         if !self.is_compatible(t, &rhs_type) {
+                        println!("1");
                             return Err(Semantic_err::TypeMismatch {
                                 expected: t.clone(),
                                 got: rhs_type,
@@ -288,20 +325,51 @@ pub mod Analyser {
                     let final_type = type_annot.clone().unwrap_or(rhs_type);
                     self.declare_varib(name.clone(), final_type, *mutable)?;
                 }
-                Statmnt::Assignment { name, op, val } => {
-                    self.update_varib(name)?;
-                    let (var_type, _) = self.get_varib(name)?;
+                Statmnt::Assignment { target, op, val } => {
                     let val_type = self.eval_type(val)?;
-                    if let Some(operat) = op {
-                        self.check_bin_op_types(operat, &var_type, &val_type)?;
-                    } else {
-                        if !self.is_compatible(&var_type, &val_type) {
-                            return Err(Semantic_err::TypeMismatch {
-                                expected: var_type,
-                                got: val_type,
-                            });
-                        }
-                    }
+                    match target {
+                        Expr::Ident(x) => {
+                            self.update_varib(x)?;
+                            let (var_type,_) = self.get_varib(x)?;
+                            if let Some(operator) = op{
+                                self.check_bin_op_types(operator, &var_type,&val_type)?;
+                            } else {
+                                if !self.is_compatible(&var_type, &val_type){
+
+                                    println!("2");
+                                    return Err(Semantic_err::TypeMismatch { expected: var_type, got:val_type });
+                                }
+                            }
+                        },
+                        Expr::Field_access { obj, field } => {
+                            let obj_type = self.eval_type(obj)?;
+                            let field_type = match &obj_type{
+                                Type::CUSTOM(sname) => {
+                                    let fields = self.structs.get(sname).ok_or_else(|| Semantic_err::Custom(format!("Obj {:?} has no fields",sname)))?;
+                                    fields.iter().find(|(fname,_)| fname == field).map(|(_,t)| t.clone()).ok_or_else(|| Semantic_err::Custom(format!("Obj {:?} has no field named {:?}",sname,field)))?
+                                },
+                                _ => {return Err(Semantic_err::Custom(format!("Can't assign to field {:?} on obj type {:?}",field,obj_type)));}
+                            };
+
+                            let root = self.root_ident(obj);
+                            if let Some(name) = root {
+                                let (_,is_mut) = self.get_varib(&name)?;
+                                if !is_mut {
+                                    return Err(Semantic_err::Immutable_Variable(name.to_string()));
+                                }
+                            }
+
+                            if let Some(operator) = op {
+                                self.check_bin_op_types(operator,&field_type,&val_type)?;
+                            }else if !self.is_compatible(&field_type, &val_type) {
+                                println!("3");
+                                return Err(Semantic_err::TypeMismatch { expected: field_type, got: val_type });
+                            }
+
+                        },
+                        _ => {return Err(Semantic_err::Custom("Invalid assignment to the assignment target".to_string()));}
+
+                    } 
                 }
                 Statmnt::If {
                     cond,
@@ -320,6 +388,7 @@ pub mod Analyser {
                     for i in then_branch {
                         self.analyze_stmt(i)?;
                     }
+                    self.exit_scope();
                     if let Some(other) = else_branch {
                         self.enter_scope();
                         for i in other {
@@ -327,7 +396,6 @@ pub mod Analyser {
                         }
                         self.exit_scope();
                     }
-                    self.exit_scope();
                 }
 
                 Statmnt::While { cond, body } => {
@@ -509,6 +577,7 @@ pub mod Analyser {
                         .functions
                         .get(name)
                         .ok_or_else(|| Semantic_err::UndefinedFunction(name.clone()))?;
+                if !STDIO_FXNS.contains(name.as_str()) {
 
                     if args.len() != param.len() {
                         return Err(Semantic_err::Custom(format!(
@@ -518,7 +587,9 @@ pub mod Analyser {
                             args.len()
                         )));
                     }
+                 }
                     for (arg, param_t) in args.iter().zip(param.iter()) {
+                    if !STDIO_FXNS.contains(name.as_str()) {
                         let arg_t = self.eval_type(arg)?;
                         if !self.is_compatible(param_t, &arg_t) {
                             return Err(Semantic_err::TypeMismatch {
@@ -526,9 +597,10 @@ pub mod Analyser {
                                 got: arg_t,
                             });
                         }
+                        }
                     }
 
-                    Ok(ret_type.clone().unwrap_or(Type::INT))
+                    Ok(ret_type.clone().unwrap_or(Type::NULL))
                 }
                 Expr::Struct_enum_init { name, fields } => {
                     if let Some(s_fields) = self.structs.get(name) {
@@ -636,6 +708,7 @@ pub mod Analyser {
                 (Type::FLOAT, Type::FLOAT) => true,
                 (Type::STRING, Type::STRING) => true,
                 (Type::BOOL, Type::BOOL) => true,
+                (Type::NULL,Type::NULL) => true,
                 (Type::CUSTOM(a), Type::CUSTOM(b)) => a == b,
                 _ => false,
             }
@@ -648,8 +721,16 @@ pub mod Analyser {
             r_type: &Type,
         ) -> Semantic_Ret<Type> {
             match op {
-                BIN_OP::Add
-                | BIN_OP::Sub
+                BIN_OP::Add => {
+                 if self.is_compatible(l_type, r_type) {
+                    if matches!(l_type,Type::INT | Type::FLOAT |Type::STRING){
+                        Ok(l_type.clone())
+                    } else{Err(Semantic_err::Custom(format!("Cannot add values of type {:?}",l_type)))}
+                 } else{
+                    Err(Semantic_err::TypeMismatch { expected: l_type.clone(), got: r_type.clone() })
+                 }
+                }
+                ,BIN_OP::Sub
                 | BIN_OP::Mul
                 | BIN_OP::Div
                 | BIN_OP::Mod
@@ -670,9 +751,14 @@ pub mod Analyser {
                         })
                     }
                 }
-                BIN_OP::Eq
-                | BIN_OP::N_eq
-                | BIN_OP::Lt
+                BIN_OP::Eq | BIN_OP::N_eq => {
+                    if self.is_compatible(l_type, r_type) {
+                        Ok(Type::BOOL)
+                    }else{
+                        Err(Semantic_err::TypeMismatch { expected: l_type.clone(), got: r_type.clone() })
+                    }
+                },
+                BIN_OP::Lt
                 | BIN_OP::Lt_eq
                 | BIN_OP::Gt
                 | BIN_OP::Gt_eq => {

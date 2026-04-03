@@ -54,6 +54,121 @@ pub mod collections {
     }
 }
 
+pub mod Main{
+use std::env;
+
+#[derive(Debug,Clone)]
+pub struct CLI{
+    pub files: Vec<String>,
+    pub debug: bool,
+    pub env_var: Vec<(String,String)>,
+    pub pretty: bool
+}
+
+impl CLI{
+    pub fn new() -> Self{
+        Self{
+            files: Vec::new(),
+            debug: false,
+            env_var: Vec::new(),
+            pretty: false,
+        }       
+    }
+
+    pub fn parse_envs(&mut self,args: &str){
+    let mut args = args.to_string();
+        if !args.ends_with(")") {
+            return;
+        }else{
+        args.pop();
+        }
+        //   a=b,c=d ,d=k , ...
+        let args =String::from_utf8( args.bytes().filter(|c| *c != b' ' || *c != b'\n' ).collect()).unwrap();
+        args.split(",").for_each(|x| {
+           let x = x.split("=").collect::<Vec<&str>>(); 
+           self.env_var.push((x[0].to_string(),x[1].to_string()));
+        });
+    }
+    
+    pub fn DEBUG_STR(){
+        println!("./Interpretor [-d|-E|-f] <FILES> ...\n
+   -d: To enable the Debug mode
+   -f: To enable pretty Debug mode[Debug mode has to be enabled to work]
+   -E=(ENV_VAR=VAL,...): A tuple of comma seperated env vars
+   <FILES>: A file taken as argument with extentions .rs and .ihit");
+    }
+
+    pub fn parse_clargs(&mut self) -> CLI_ret<bool>{
+    let arguments: Vec<String> = env::args().collect();
+    if arguments.len() < 2  {
+        Self::DEBUG_STR();    
+    }
+    let l = arguments.len();
+    for i in 1..l {
+        if arguments[i].starts_with("-E=("){
+           self.parse_envs(&arguments[i][4..]); 
+        }
+        else{
+        match &arguments[i][..]{
+            "-d" => {
+                self.debug = true;
+            },
+            "-f" => {
+                self.pretty = true;
+            },
+            "-df" | "-fd" => {
+                self.pretty = true;
+                self.debug = true;
+            }
+            t => {
+            if !t.ends_with(".rs") && !t.ends_with(".ihit"){
+                let x:Vec<&str> = t.split("/").collect();
+                if x.last().iter().any(|c| {**c == "."}){
+                    if let Some(y) = x.last(){
+                        Self::DEBUG_STR();    
+                        return Err(CLI_ERR::UnsupportedFileformat(y.to_string()));
+                    } else{
+                    Self::DEBUG_STR();    
+                    return Err(CLI_ERR::UnsupportedFileformat(x.last().unwrap().to_string().split_off(x.last().unwrap().to_string().rfind(".").unwrap())))
+                    }
+                }
+                else{
+                    Self::DEBUG_STR();    
+                    return Err(CLI_ERR::Unsupported(t.to_string()));
+                }
+            }else{
+                self.files.push(t.to_string());
+            }
+
+            }
+        }
+    }
+    }
+
+
+    Ok(true)
+    }
+}
+
+#[derive(Debug,Clone)]
+pub enum CLI_ERR {
+    UnknownParam(String),
+    UnsupportedFileformat(String),
+    Unsupported(String),
+    Custom(String),
+}
+
+static SUPPORTED_ARGS:&'static [&str;6] = &["<FILES>","-d","-E=(<ENV_VAR_NAME>=<VAL>,...)","-f","-df","-fd"];
+
+pub type CLI_ret<T> = Result<T,CLI_ERR>;
+
+
+
+
+
+
+}
+
 pub mod Checkers {
     ///  Checks if a char is numeric 
     ///  # Arguments

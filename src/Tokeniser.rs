@@ -24,6 +24,7 @@ pub mod Tokeniser {
         HashMap::from([
             ("let", LTOK::LET),
             ("mut", LTOK::MUT),
+            ("&mut", LTOK::MUT_ref),
             ("const", LTOK::CONST),
             ("var", LTOK::LET),
             ("if", LTOK::IF),
@@ -72,6 +73,8 @@ pub mod Tokeniser {
             ("double", LTOK::FLOAT_TYPE),
             ("float32", LTOK::FLOAT_TYPE),
             ("float64", LTOK::FLOAT_TYPE),
+            ("struct", LTOK::STRUCT),
+            ("enum", LTOK::ENUM),
             ("Int", LTOK::INT_TYPE),
             ("Short", LTOK::INT_TYPE),
             ("Char", LTOK::INT_TYPE),
@@ -120,7 +123,7 @@ pub mod Tokeniser {
     
         pub fn new(v: String) -> Self {
             let file = fs::read_to_string(v).unwrap();
-            let t = file.replace("..", ";");
+            let t = file.replace("..", " ` ");
             Self {
                 text:t,
                 Lexer_Output: Vec::new(),
@@ -452,7 +455,22 @@ pub mod Tokeniser {
                         ret.push(LTOK::ASSGN);
                         temp.clear();
                     }
-                } else if i == '!' {
+                } else if i == '`'{
+                    ret.push(LTOK::RANGE);
+                    temp.clear();
+                    iter.next();
+                }
+                else if i == '.'{
+                    if let Some('.') = iter.next(){
+                        ret.push(LTOK::RANGE);
+                        temp.clear();
+                        iter.next();
+                    }else{
+                        ret.push(LTOK::DOT);
+                        temp.clear();
+                    }
+                                  }
+                 else if i == '!' {
                     if let Some('=') = iter.next() {
                         ret.push(LTOK::N_EQ);
                         temp.clear();

@@ -6,43 +6,30 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
 
-//   main.rs   // 
+//   main.rs   //
 // The main entry point
 
-
-#![allow(non_camel_case_types,non_snake_case,non_upper_case_globals)]
+#![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 mod Ast;
+mod Errors;
 mod Frontend;
 mod Helper;
+mod Ident_table;
+mod Interpret;
 mod Lexer_Tok;
 mod Parser;
 mod Semantic_Analysis;
-mod Ident_table;
 mod Tokeniser;
-mod Errors;
-mod Interpretor;
+mod Codegen;
 mod printer;
-use std::env;
 
-use crate::Semantic_Analysis::Analyser::Semantilizer;
-
+use crate::{Interpret::interpretor::Interpretor}; 
 
 fn main() {
-    let arguments: Vec<String> = env::args().collect();
-    if arguments.len() != 2 {
-        std::process::exit(0);
+
+    let mut interpretor:Interpretor = Interpretor::new();
+    if let Ok(result) = interpretor.Run(){
+        println!("Result={result}");
     }
 
-    let mut LEXER = Tokeniser::Tokeniser::Lexer::new(arguments[1].clone());
-    LEXER.Tokenise();
-    LEXER.print_tok();
-    println!();
-    println!();
-    let mut PARSER = Parser::PARSER::Parser::new(LEXER.Lexer_Output);
-    let t = PARSER.Parse().unwrap();
-    println!("{:?}",t);
-    let mut sem = Semantilizer::new();
-    let z =  sem.analyse(&t);
-    println!("{:?} !!",z);
-    /* ADD THE FRONTEND CODE TO REPLACE THIS  */
 }

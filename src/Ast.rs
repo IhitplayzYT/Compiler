@@ -143,7 +143,7 @@ pub mod AST {
 
         Field_access {
             obj : Box<Expr>,
-            field:String,
+            field: String,
         },
         Postincr(String), // x++
         Postdecr(String), // x--
@@ -245,7 +245,7 @@ pub mod AST {
             else_branch: Option<Vec<Statmnt>>,
         },
         Assignment{
-            name:String,            // Deals with assignment/reassignment
+            target : Expr,            // Deals with assignment/reassignment
             op : Option<BIN_OP>,
             val: Expr,
         },
@@ -281,7 +281,7 @@ pub mod AST {
 ///     Program : Vec::new(Declare),
 /// }
 /// ```    
-    #[derive(Debug,Clone)]
+    #[derive(Debug,Clone,PartialEq)]
     pub struct Code{
         pub Program: Vec<Declare>,
     }
