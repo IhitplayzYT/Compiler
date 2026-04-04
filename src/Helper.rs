@@ -61,6 +61,7 @@ use std::env;
 pub struct CLI{
     pub files: Vec<String>,
     pub debug: bool,
+    pub optimise: usize,
     pub env_var: Vec<(String,String)>,
     pub pretty: bool
 }
@@ -70,6 +71,7 @@ impl CLI{
         Self{
             files: Vec::new(),
             debug: false,
+            optimise: 0,
             env_var: Vec::new(),
             pretty: false,
         }       
@@ -91,11 +93,15 @@ impl CLI{
     }
     
     pub fn DEBUG_STR(){
-        println!("./Interpretor [-d|-E|-f] <FILES> ...\n
+        println!("./Interpretor [-d|-E|-f|-O] OPTIMISE=x -o <FILES> ...\n
    -d: To enable the Debug mode
    -f: To enable pretty Debug mode[Debug mode has to be enabled to work]
    -E=(ENV_VAR=VAL,...): A tuple of comma seperated env vars
-   <FILES>: A file taken as argument with extentions .rs and .ihit");
+   -o: To create and output the IR file 
+   -O[0/1/2/3]: Optimise flag where higher the number more optimised the code but longer the compile times and higher chance of unintentional logical mistakes due to optimises
+   OPTIMISE=[0/1/2/3]: Same as the -O flag
+   <FILES>: A file taken as argument with extentions .rs and .ihit
+   ");
     }
 
     pub fn parse_clargs(&mut self) -> CLI_ret<bool>{
@@ -107,6 +113,17 @@ impl CLI{
     for i in 1..l {
         if arguments[i].starts_with("-E=("){
            self.parse_envs(&arguments[i][4..]); 
+        } else if arguments[i].starts_with("-O") || arguments[i].starts_with("OPTIMISE="){
+            match arguments[i].chars().last().unwrap(){
+                '0' => self.optimise = 0,
+                '1' => self.optimise = 1,
+                '2' => self.optimise = 2,
+                '3' => self.optimise = 3,
+                _ => {
+                    Self::DEBUG_STR();
+                    return Err(CLI_ERR::UnknownParam(arguments[i]))
+                }
+            }
         }
         else{
         match &arguments[i][..]{

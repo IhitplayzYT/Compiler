@@ -48,8 +48,8 @@ pub mod Err{
     ///     - Clone
     /// # Example
     /// ```
-    /// InterpretorError::UndefinedVariable("Undefined varib".to_string());
-    /// InterpretorError::DivideByZero;
+    /// CompilerError::UndefinedVariable("Undefined varib".to_string());
+    /// CompilerError::DivideByZero;
     /// ```
     ///    
     #[derive(Debug,Clone)] 
@@ -95,13 +95,13 @@ pub mod Err{
     }
 
     #[derive(Debug,Clone)] 
-    pub enum InterpretorError{
+    pub enum CompilerError{
         RULES_ERROR(String),
         FRONTEND_ERROR(String),
         CODEGEN_ERROR(String),
     }
 
-    pub type InterpretorReturn<T> = Result<T,InterpretorError>;
+    pub type CompilerReturn<T> = Result<T,CompilerError>;
 
 
     /// Enum that stores the Parser Errors Possible
@@ -128,7 +128,7 @@ pub mod Err{
         Semerr(Semantic_err),
         Parseerr(ParserError),
         Codegenerr(CodegenError),
-        Intererr(InterpretorError),
+        Intererr(CompilerError),
     }
 
     impl ParserError{

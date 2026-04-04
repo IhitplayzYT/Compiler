@@ -15,7 +15,7 @@ mod Errors;
 mod Frontend;
 mod Helper;
 mod Ident_table;
-mod Interpret;
+mod Compile;
 mod Lexer_Tok;
 mod Parser;
 mod Semantic_Analysis;
@@ -23,11 +23,11 @@ mod Tokeniser;
 mod Codegen;
 mod printer;
 
-use crate::{Interpret::interpretor::Interpretor}; 
+use crate::{Compile::compiler::Compiler}; 
 
 fn main() {
 
-    let mut interpretor:Interpretor = Interpretor::new();
+    let mut interpretor:Compiler = Compiler::new();
     if let Ok(result) = interpretor.Run(){
         println!("Result={result}");
     }
