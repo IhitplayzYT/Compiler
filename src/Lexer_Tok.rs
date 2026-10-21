@@ -88,6 +88,7 @@ pub mod Lex_Tok {
         SEMICOLON,      // -> (;)
         DOT,            // -> (.)
         COLON,          // -> (:)
+        WALRUS,          // -> (:=)
         COMMA,          // -> (,)
         NULL,           // -> (None/Null)   
         TRUE,           // -> Boolean True

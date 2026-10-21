@@ -14,21 +14,20 @@ mod Ast;
 mod Errors;
 mod Frontend;
 mod Helper;
-mod Ident_table;
 mod Compile;
 mod Lexer_Tok;
 mod Parser;
 mod Semantic_Analysis;
 mod Tokeniser;
-mod Codegen;
 mod printer;
+mod Codegen;
 
 use crate::{Compile::compiler::Compiler}; 
 
 fn main() {
 
-    let mut interpretor:Compiler = Compiler::new();
-    if let Ok(result) = interpretor.Run(){
+    let mut comp = Compiler::new();
+    if let Ok(result) = comp.Run(){
         println!("Result={result}");
     }
 

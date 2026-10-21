@@ -5,15 +5,13 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, version 3.
-#![allow(non_snake_case,non_camel_case_types,unused_imports,dead_code)]
 
 //   Compiler.rs   //
 // Contains the main Compiler API
 
 pub mod compiler{
-use crate::Tokeniser::Tokeniser::Lexer;
-use crate::{Codegen::Codegen::Codegen, Frontend::Frontend::Frontend, Helper::Main::CLI};
-use crate::Errors::Err::{self, CompilerError, CompilerReturn};
+use crate::{Frontend::Frontend::Frontend, Helper::Main::CLI};
+use crate::Errors::Err::{CompilerError, CompilerReturn, ERROR};
     /// Compiler structure[MAIN API]
     /// 
     /// # Traits
@@ -28,9 +26,9 @@ use crate::Errors::Err::{self, CompilerError, CompilerReturn};
     /// ```    
     #[derive(Debug,Clone)]
     pub struct Compiler{
+        fname: Option<String>,
         rules_engine: CLI,
         frontend:Frontend,
-        codegen:Codegen
     }
 
 
@@ -44,42 +42,34 @@ use crate::Errors::Err::{self, CompilerError, CompilerReturn};
         /// ```
         /// Compiler::new("myfile.c");
         /// ```    
-    
+        
+
         pub fn new() -> Self{
-            Self{rules_engine:CLI::new(),frontend:Frontend::new(),codegen:Codegen::new()}
+            Self{fname:None,rules_engine:CLI::new(),frontend:Frontend::new()}
+        }
+
+        pub fn Compile(&mut self) -> CompilerReturn<bool>{
+            self.rules_engine.parse_clargs().map_err(|x| {CompilerError::RULES_ERROR(format!("{x:?}"))})?;
+            let k = self.frontend.Exec(self.rules_engine.clone()).map_err(|z|{
+                match z{
+                    ERROR::Semerr(x) => {CompilerError::FRONTEND_ERROR(format!("{x:?}"))},
+                    ERROR::Parseerr(x) => {CompilerError::FRONTEND_ERROR(format!("{x:?}"))},
+                    ERROR::Irgenerr(x) => {CompilerError::FRONTEND_ERROR(format!("{x:?}"))},
+                    _ => panic!("Not possible")
+                }
+            })?;
+
+            Ok(true)
+        }
+
+        pub fn Link(&mut self) -> CompilerReturn<bool>{
+       
+            Ok(true)
         }
 
         pub fn Run(&mut self) -> CompilerReturn<bool>{
-            /*  ***************************************** Rules Engine *****************************************  */
-           let clargs = self.rules_engine.parse_clargs().map_err(|e| {
-            CompilerError::RULES_ERROR(format!("{e:?}"))
-           })?; 
-            /*  ***************************************** Rules Engine *****************************************  */
-
-            if !clargs{
-           return Err(CompilerError::RULES_ERROR(format!("Rules engine failed! : {clargs:?}")));
-            }
-
-           if self.rules_engine.files.is_empty(){
-            return Err(CompilerError::RULES_ERROR("No target file provided!!".to_string()));
-           }
-
-            /*  ***************************************** Frontend *****************************************  */
-           self.frontend.lexer = Some(Lexer::new(self.rules_engine.files[0].clone()));
-            let code = self.frontend.Exec(self.rules_engine.clone()).map_err(|e| {
-            CompilerError::FRONTEND_ERROR(format!("{e:?}"))
-           })?;
-            /*  ***************************************** Frontend *****************************************  */
-
-
-           
-            /*  ***************************************** Codegen *****************************************  */
-           let status = self.codegen.Exec(&code,self.rules_engine.clone()).map_err(|e| {
-            CompilerError::CODEGEN_ERROR(format!("{e:?}"))
-           })?;
-            /*  ***************************************** Codegen *****************************************  */
-
-            Ok(status)
+       
+            Ok(true)
         }         
 
     }

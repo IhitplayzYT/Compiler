@@ -11,7 +11,7 @@
 
 #![allow(non_camel_case_types,non_snake_case,non_upper_case_globals,dead_code)]
 pub mod Err{
-    use crate::{Ast::AST::Type, Codegen::Codegen::{ControlFlow}};
+    use crate::Ast::AST::{ControlFlow, Type};
     /// Type defination of the Parser Return Type
     /// This is will be the majority return type used in the parser
     /// 
@@ -38,9 +38,9 @@ pub mod Err{
     /// fn test() -> CodegenReturn<()> 
     /// ```
     ///     
-    pub type CodegenReturn<T> = Result<T,CodegenError>;
+    pub type IRGenReturn<T> = Result<T,IRGenError>;
 
-    /// Enum that stores the Codegen Errors Possible
+    /// Enum that stores the IRGen Errors Possible
     /// 
     /// # Traits
     /// - Derived<br/>
@@ -48,12 +48,12 @@ pub mod Err{
     ///     - Clone
     /// # Example
     /// ```
-    /// CompilerError::UndefinedVariable("Undefined varib".to_string());
-    /// CompilerError::DivideByZero;
+    /// IRGenError::UndefinedVariable("Undefined varib".to_string());
+    /// IRGenError::DivideByZero;
     /// ```
     ///    
     #[derive(Debug,Clone)] 
-    pub enum CodegenError{
+    pub enum IRGenError{
         UndefinedVariable(String),
         RedefinedVariable(String),
         ImmutableVariable(String),
@@ -94,11 +94,22 @@ pub mod Err{
         Custom(String),
     }
 
+    /// Enum that stores the IR Gen Errors Possible
+    /// 
+    /// # Traits
+    /// - Derived<br/>
+    ///     - Debug
+    ///     - Clone
+    /// # Example
+    /// ```
+    /// ```
+    ///    
+
     #[derive(Debug,Clone)] 
     pub enum CompilerError{
         RULES_ERROR(String),
         FRONTEND_ERROR(String),
-        CODEGEN_ERROR(String),
+        IRGEN_ERROR(String),
     }
 
     pub type CompilerReturn<T> = Result<T,CompilerError>;
@@ -127,8 +138,8 @@ pub mod Err{
     pub enum ERROR{
         Semerr(Semantic_err),
         Parseerr(ParserError),
-        Codegenerr(CodegenError),
-        Intererr(CompilerError),
+        Irgenerr(IRGenError),
+        Complilerr(CompilerError),
     }
 
     impl ParserError{

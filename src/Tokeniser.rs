@@ -351,7 +351,16 @@ pub mod Tokeniser {
                     }
                     temp.clear();
                     continue;
-                } else if i == '('
+                }else if i == ':'{
+                    if let Some(ch) = iter.next(){
+                        if ch == '='{
+                            ret.push(LTOK::WALRUS);
+                            temp.clear();
+                            iter.next();
+                        }
+                    }
+                }
+                 else if i == '('
                     || i == '['
                     || i == '{'
                     || i == ')'

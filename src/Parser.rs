@@ -435,6 +435,27 @@ pub mod PARSER {
 
         /* ******************************** LET & CONST ********************************  */
 
+        fn eval_walrus(&mut self,name: String) -> Parser_ret<Statmnt>{
+        self.consume(&LTOK::WALRUS)?;
+        let val = if let LTOK::IDENT(type_name) = self.peek().clone() {
+        let saved_idx = self.idx;
+        self.next();
+        if self.check(&LTOK::LBRACE) {
+            self.next();
+            let fields = self.parse_struct_fields()?;
+            self.consume(&LTOK::RBRACE)?;
+            Expr::Struct_enum_init { name: type_name, fields }
+        } else {
+            self.idx = saved_idx;
+            self.eval_expr()?
+        }
+        } else {
+            self.eval_expr()?
+        };
+        self.consume(&LTOK::SEMICOLON)?;
+        Ok(Statmnt::Let { name, mutable:false, type_annot:None, value: val })
+        }
+
         /// Parser Helper function
         /// Evaluates a let token 
         ///  
@@ -496,7 +517,6 @@ pub mod PARSER {
             else{
                 None
             };
-//
             self.consume(&LTOK::ASSGN)?;
             let val = if let LTOK::IDENT(type_name) = self.peek().clone() {
             let saved_idx = self.idx;
@@ -531,10 +551,10 @@ pub mod PARSER {
         fn eval_if_else(&mut self) -> Parser_ret<Statmnt>{
             self.consume(&LTOK::IF)?;
             let has_paren = self.match_token(&[LTOK::LPAREN]);
-            let cond = self.eval_expr()?;
             if has_paren{
                 self.consume(&LTOK::RPAREN)?;
             }
+            let cond = self.eval_expr()?;
 
             self.consume(&LTOK::LBRACE)?;
             let then_branch = self.eval_block()?;
@@ -716,7 +736,8 @@ pub mod PARSER {
                 self.consume(&LTOK::RBRACE)?;
                 Ok(Statmnt::Block(blk))
             },
-            _ => self.eval_assign(),
+            LTOK::IDENT(z) => {if self.peek() == &LTOK::WALRUS{ self.eval_walrus(z.clone()) }else {self.eval_assign()}},
+            _ => {self.eval_assign()}
 
         }  
     }
@@ -1240,8 +1261,6 @@ pub mod PARSER {
     ///  
 
 
-    // TODO:
-    // FIXME: Finish this function
     fn eval_primary(&mut self) -> Parser_ret<Expr> {
     let token = self.next();
         match token {

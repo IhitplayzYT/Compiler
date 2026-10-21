@@ -77,7 +77,7 @@ pub mod Frontend {
                 println!("}}");
             }                
             self.parser = Some(Parser::new(lexer.Lexer_Output.clone()));
-            let ast = self.parser.as_mut().unwrap().Parse().map_err(|e| {println!("Parser Error {e:?}");ERROR::Parseerr(e)})?;
+            let ast = self.parser.as_mut().unwrap().Parse().map_err(|e| {println!("Parser Error: {e:?}");ERROR::Parseerr(e)})?;
             println!("{}Parser Sucess!!",if clargs.debug {"\n"} else {""});
             if clargs.debug{
                 if let Some(x) = self.parser.clone(){
@@ -85,13 +85,13 @@ pub mod Frontend {
                     if clargs.pretty {x.print();} else {println!("{:?}\n",ast);}
                 }
             }
-            self.semantic_analyser.analyse(&ast).map_err(|e| {println!("Semantic Error {e:?}");ERROR::Semerr(e)})?;
+            self.semantic_analyser.analyse(&ast).map_err(|e| {println!("Semantic Error: {e:?}");ERROR::Semerr(e)})?;
             println!("{}Semantalizer Sucess!!",if clargs.debug {"\n"} else {""});
             Ok(ast)
-
             }else{
                 panic!("No file provided");
             } 
+
 
         }
 

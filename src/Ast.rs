@@ -173,6 +173,14 @@ pub mod AST {
     }
 
 
+    #[derive(Debug,Clone)] 
+    pub enum ControlFlow{
+        Continue,
+        Break,
+        Return
+    }
+
+
 
 /// Enum to hold declarations expressions used by Parser
 /// 

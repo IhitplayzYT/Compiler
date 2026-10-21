@@ -1,0 +1,7 @@
+/home/ihitplayzyt/Compiler/target/debug/deps/bumpalo-478d66a0765b2513.d: /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/lib.rs /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/alloc.rs /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/../README.md
+
+/home/ihitplayzyt/Compiler/target/debug/deps/libbumpalo-478d66a0765b2513.rmeta: /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/lib.rs /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/alloc.rs /home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/../README.md
+
+/home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/lib.rs:
+/home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/alloc.rs:
+/home/ihitplayzyt/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bumpalo-3.20.3/src/../README.md:
